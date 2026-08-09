@@ -1,7 +1,11 @@
+import re
 import uuid
 from unittest.mock import patch
+from urllib.parse import urlparse
 
+from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -26,11 +30,17 @@ class AuthenticationTests(TestCase):
     password = "CinemaPortfolio2026!"
 
     def create_user(self, email="pessoa@example.com"):
-        return get_user_model().objects.create_user(
+        user = get_user_model().objects.create_user(
             username=email,
             email=email,
             password=self.password,
         )
+        EmailAddress.objects.update_or_create(
+            user=user,
+            email=email,
+            defaults={"verified": True, "primary": True},
+        )
+        return user
 
     def test_login_and_signup_pages_offer_both_methods(self):
         with override_settings(
@@ -44,11 +54,14 @@ class AuthenticationTests(TestCase):
         self.assertContains(login_response, "Continuar com Google")
         self.assertContains(login_response, "E-mail")
         self.assertContains(login_response, "Senha")
+        self.assertContains(login_response, "Esqueci minha senha")
+        self.assertContains(login_response, 'rel="icon"')
         self.assertEqual(signup_response.status_code, 200)
         self.assertContains(signup_response, "Criar com Google")
         self.assertContains(signup_response, "Confirme a senha")
+        self.assertContains(signup_response, "link para confirmar seu e-mail")
 
-    def test_email_signup_creates_and_authenticates_user(self):
+    def test_email_signup_requires_confirmation_before_authentication(self):
         response = self.client.post(
             reverse("account_signup"),
             {
@@ -58,9 +71,74 @@ class AuthenticationTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("movies:home"))
+        self.assertRedirects(response, reverse("account_email_verification_sent"))
         user = get_user_model().objects.get(email="nova@example.com")
+        email_address = EmailAddress.objects.get(user=user, email=user.email)
+        self.assertFalse(email_address.verified)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            "Confirme seu e-mail no QualFilmeHoje",
+        )
+        self.assertIn("/accounts/confirm-email/", mail.outbox[0].body)
+
+        confirmation_url = re.search(
+            r"https?://[^\s]+(/accounts/confirm-email/[^\s]+/)",
+            mail.outbox[0].body,
+        )
+        self.assertIsNotNone(confirmation_url)
+        confirmation_path = confirmation_url.group(1)
+        confirmation_page = self.client.get(confirmation_path)
+        self.assertContains(confirmation_page, "Confirmar e entrar")
+
+        confirmed_response = self.client.post(confirmation_path)
+        self.assertRedirects(confirmed_response, reverse("movies:home"))
+
+        email_address.refresh_from_db()
+        self.assertTrue(email_address.verified)
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+
+    def test_password_recovery_changes_password_by_email_link(self):
+        user = self.create_user("recuperar@example.com")
+
+        request_response = self.client.post(
+            reverse("account_reset_password"),
+            {"email": user.email},
+        )
+
+        self.assertRedirects(
+            request_response,
+            reverse("account_reset_password_done"),
+        )
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            "Redefina sua senha do QualFilmeHoje",
+        )
+        reset_url = re.search(
+            r"https?://[^\s]+(/accounts/password/reset/key/[^\s]+/)",
+            mail.outbox[0].body,
+        )
+        self.assertIsNotNone(reset_url)
+
+        reset_page = self.client.get(reset_url.group(1), follow=True)
+        self.assertEqual(reset_page.status_code, 200)
+        self.assertContains(reset_page, "Crie uma nova senha")
+        reset_path = urlparse(reset_page.request["PATH_INFO"]).path
+        new_password = "NovaSenhaCinema2026!"
+        changed_response = self.client.post(
+            reset_path,
+            {"password1": new_password, "password2": new_password, "action": ""},
+        )
+
+        self.assertRedirects(
+            changed_response,
+            reverse("account_reset_password_from_key_done"),
+        )
+        user.refresh_from_db()
+        self.assertTrue(user.check_password(new_password))
+        self.assertFalse(user.check_password(self.password))
 
     def test_email_login_and_post_logout(self):
         user = self.create_user()

@@ -46,6 +46,10 @@
 
       <button type="submit" class="auth-submit">Criar minha conta <span aria-hidden="true">→</span></button>
     </form>
-    <p class="auth-footnote">Ao continuar, você concorda em usar a conta apenas para salvar sua experiência no site.</p>
+    {% if email_features_enabled %}
+      <p class="auth-footnote">Enviaremos um link para confirmar seu e-mail antes do primeiro acesso.</p>
+    {% else %}
+      <p class="auth-footnote">Ao continuar, você concorda em usar a conta apenas para salvar sua experiência no site.</p>
+    {% endif %}
   </section>
 {% endblock %}

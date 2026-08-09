@@ -1,0 +1,9 @@
+Olá!
+
+Use o link abaixo para confirmar seu e-mail no QualFilmeHoje:
+
+{{ activate_url }}
+
+Esse link é pessoal e expira por segurança. Se você não solicitou esta confirmação, ignore a mensagem.
+
+QualFilmeHoje

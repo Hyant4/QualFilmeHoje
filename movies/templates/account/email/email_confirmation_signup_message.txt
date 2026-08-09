@@ -1,0 +1,9 @@
+Olá!
+
+Confirme seu e-mail para ativar sua conta no QualFilmeHoje:
+
+{{ activate_url }}
+
+Esse link é pessoal e expira por segurança. Se você não criou essa conta, ignore esta mensagem.
+
+QualFilmeHoje

@@ -1,0 +1,6 @@
+{% extends "account/email/base_message.html" %}
+{% block title %}Confirme seu e-mail{% endblock %}
+{% block heading %}Confirme seu e-mail{% endblock %}
+{% block message %}<p style="margin:0;">Você criou uma conta no QualFilmeHoje. Confirme o endereço para liberar seus favoritos e seu histórico em qualquer dispositivo.</p>{% endblock %}
+{% block action %}<a href="{{ activate_url }}" style="display:inline-block;padding:14px 20px;background:#e8b94c;color:#241905;font-size:14px;font-weight:700;text-decoration:none;text-transform:uppercase;">Confirmar meu e-mail →</a>{% endblock %}
+{% block safety %}Esse link é pessoal e expira por segurança. Se você não criou essa conta, ignore esta mensagem.{% endblock %}

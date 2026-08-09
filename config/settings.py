@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+    "anymail",
 ]
 
 MIDDLEWARE = [
@@ -107,9 +108,10 @@ LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_LOGOUT_ON_GET = False
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
@@ -120,6 +122,32 @@ SOCIALACCOUNT_STORE_TOKENS = False
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
 GOOGLE_AUTH_CONFIGURED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
+CONFIGURED_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "").strip()
+EMAIL_DELIVERY_CONFIGURED = bool(BREVO_API_KEY and CONFIGURED_FROM_EMAIL)
+EMAIL_FEATURES_ENABLED = EMAIL_DELIVERY_CONFIGURED or DEBUG or IS_TESTING
+
+DEFAULT_FROM_EMAIL = (
+    CONFIGURED_FROM_EMAIL or "QualFilmeHoje <no-reply@localhost>"
+)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_TIMEOUT = 10
+
+if IS_TESTING:
+    EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+elif EMAIL_DELIVERY_CONFIGURED:
+    EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
+    ANYMAIL = {"BREVO_API_KEY": BREVO_API_KEY}
+elif DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+
+# Não bloqueia cadastros na Vercel antes de existir um remetente real. Assim que
+# BREVO_API_KEY e DEFAULT_FROM_EMAIL forem configurados, a confirmação passa a
+# ser obrigatória e a recuperação de senha fica disponível automaticamente.
+ACCOUNT_EMAIL_VERIFICATION = "mandatory" if EMAIL_FEATURES_ENABLED else "none"
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {

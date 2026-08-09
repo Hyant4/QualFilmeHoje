@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}QualFilmeHoje{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background:#0e0a0a;color:#f4ece0;font-family:Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0e0a0a;padding:32px 14px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border:1px solid #49381c;background:#181112;">
+          <tr>
+            <td style="padding:28px 30px;border-bottom:1px solid #49381c;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="width:42px;height:42px;border:2px solid #e8b94c;color:#e8b94c;font-size:25px;font-weight:700;text-align:center;vertical-align:middle;">Q</td>
+                  <td style="padding-left:13px;color:#f4ece0;font-size:21px;font-weight:700;">QualFilmeHoje</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:34px 30px;">
+              <p style="margin:0 0 10px;color:#e8b94c;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">Sua próxima sessão</p>
+              <h1 style="margin:0 0 18px;color:#f4ece0;font-size:28px;line-height:1.15;">{% block heading %}{% endblock %}</h1>
+              <div style="color:#cbbdc0;font-size:15px;line-height:1.7;">{% block message %}{% endblock %}</div>
+              <div style="margin-top:28px;">{% block action %}{% endblock %}</div>
+              <p style="margin:28px 0 0;color:#7f6e71;font-size:12px;line-height:1.6;">{% block safety %}{% endblock %}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 30px;border-top:1px solid #49381c;color:#7f6e71;font-size:11px;">
+              Mensagem automática do QualFilmeHoje. Não responda a este e-mail.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

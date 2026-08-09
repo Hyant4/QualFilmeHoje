@@ -33,7 +33,10 @@
         {% for error in form.login.errors %}<small>{{ error }}</small>{% endfor %}
       </div>
       <div class="auth-field{% if form.password.errors %} has-error{% endif %}">
-        <label for="{{ form.password.id_for_label }}">Senha</label>
+        <div class="auth-label-row">
+          <label for="{{ form.password.id_for_label }}">Senha</label>
+          {% if email_features_enabled %}<a href="{% url 'account_reset_password' %}">Esqueci minha senha</a>{% endif %}
+        </div>
         {{ form.password }}
         {% for error in form.password.errors %}<small>{{ error }}</small>{% endfor %}
       </div>

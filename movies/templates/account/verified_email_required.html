@@ -1,0 +1,16 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}E-mail não confirmado{% endblock %}
+{% block content %}
+  <section class="auth-card auth-confirm" aria-labelledby="verified-required-title">
+    <div class="auth-confirm-icon" aria-hidden="true">@</div>
+    <div class="auth-card-head">
+      <p class="eyebrow">Acesso protegido</p>
+      <h2 id="verified-required-title">Confirme seu e-mail</h2>
+      <p>Esse endereço ainda não foi confirmado. Enviamos uma nova mensagem; abra o link recebido para continuar.</p>
+    </div>
+    <div class="auth-actions">
+      <a href="{% url 'account_login' %}" class="auth-submit auth-submit-link">Voltar ao login <span aria-hidden="true">→</span></a>
+      <a href="{% url 'movies:home' %}" class="auth-secondary">Voltar ao gerador</a>
+    </div>
+  </section>
+{% endblock %}

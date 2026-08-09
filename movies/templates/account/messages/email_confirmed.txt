@@ -1,0 +1,1 @@
+E-mail {{ email }} confirmado com sucesso.

@@ -1,0 +1,29 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}Confirmar e-mail{% endblock %}
+{% block content %}
+  <section class="auth-card auth-confirm" aria-labelledby="confirm-email-title">
+    {% if confirmation and can_confirm %}
+      <div class="auth-confirm-icon" aria-hidden="true">✓</div>
+      <div class="auth-card-head">
+        <p class="eyebrow">Endereço recebido</p>
+        <h2 id="confirm-email-title">Confirme seu e-mail</h2>
+        <p>Você está confirmando:</p>
+        <strong class="auth-email-address">{{ confirmation.email_address.email }}</strong>
+      </div>
+      {% url 'account_confirm_email' confirmation.key as confirmation_url %}
+      <form method="post" action="{{ confirmation_url }}" class="auth-form">
+        {% csrf_token %}
+        {{ redirect_field }}
+        <button type="submit" class="auth-submit">Confirmar e entrar <span aria-hidden="true">→</span></button>
+      </form>
+    {% else %}
+      <div class="auth-confirm-icon auth-error-icon" aria-hidden="true">!</div>
+      <div class="auth-card-head">
+        <p class="eyebrow">Link indisponível</p>
+        <h2 id="confirm-email-title">Não foi possível confirmar</h2>
+        <p>O link expirou, já foi utilizado ou pertence a outra conta. Entre novamente para solicitar uma nova confirmação.</p>
+      </div>
+      <a href="{% url 'account_login' %}" class="auth-submit auth-submit-link">Voltar ao login <span aria-hidden="true">→</span></a>
+    {% endif %}
+  </section>
+{% endblock %}

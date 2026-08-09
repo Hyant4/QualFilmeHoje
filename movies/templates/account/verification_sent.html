@@ -1,0 +1,16 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}Confirme seu e-mail{% endblock %}
+{% block content %}
+  <section class="auth-card auth-confirm" aria-labelledby="verification-title">
+    <div class="auth-confirm-icon" aria-hidden="true">@</div>
+    <div class="auth-card-head">
+      <p class="eyebrow">Só falta um passo</p>
+      <h2 id="verification-title">Confira seu e-mail</h2>
+      <p>Enviamos um link de confirmação. Abra a mensagem para liberar sua conta. Se não encontrar, confira também a pasta de spam.</p>
+    </div>
+    <div class="auth-actions">
+      <a href="{% url 'account_login' %}" class="auth-submit auth-submit-link">Ir para o login <span aria-hidden="true">→</span></a>
+      <a href="{% url 'movies:home' %}" class="auth-secondary">Voltar ao gerador</a>
+    </div>
+  </section>
+{% endblock %}
