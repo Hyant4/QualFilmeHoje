@@ -3,13 +3,21 @@ import sys
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "insegura-apenas-para-desenvolvimento")
+IS_TESTING = "test" in sys.argv
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG or IS_TESTING:
+        SECRET_KEY = "insegura-apenas-para-desenvolvimento"
+    else:
+        raise ImproperlyConfigured("Configure a variável DJANGO_SECRET_KEY.")
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
@@ -56,7 +64,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-USE_SQLITE = os.getenv("DJANGO_USE_SQLITE", "False").lower() == "true" or "test" in sys.argv
+USE_SQLITE = os.getenv("DJANGO_USE_SQLITE", "False").lower() == "true" or IS_TESTING
 
 if DATABASE_URL and not USE_SQLITE:
     DATABASES = {
@@ -83,7 +91,9 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if not DEBUG:
+if not DEBUG and not IS_TESTING:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "3600"))
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
