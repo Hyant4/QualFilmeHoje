@@ -175,6 +175,12 @@
               {% else %}
                 <div class="poster-placeholder marquee">{{ movie.title }}</div>
               {% endif %}
+              <dl class="quick-facts" aria-label="Resumo de {{ movie.title }}">
+                <div><dt>Ano</dt><dd>{{ movie.release_date|slice:':4'|default:'—' }}</dd></div>
+                <div><dt>{% if movie.media_type == 'tv' %}Por episódio{% else %}Duração{% endif %}</dt><dd>{% if movie.runtime %}{{ movie.runtime }} min{% else %}—{% endif %}</dd></div>
+                {% if movie.media_type == 'tv' %}<div><dt>Temporadas</dt><dd>{{ movie.number_of_seasons|default:'—' }}</dd></div>{% endif %}
+                <div><dt>Avaliações</dt><dd>{{ movie.vote_count|default:0 }}</dd></div>
+              </dl>
             </aside>
 
             <div class="movie-content">

@@ -73,7 +73,7 @@ class MovieViewTests(TestCase):
         self.assertContains(response, 'class="title-facts"')
         self.assertContains(response, "2024")
         self.assertContains(response, "120 min")
-        self.assertNotContains(response, 'class="quick-facts"')
+        self.assertContains(response, 'class="quick-facts"')
         self.assertContains(response, 'href="https://example.com/watch/movie"')
         self.assertEqual(Title.objects.count(), 1)
         self.assertEqual(Generation.objects.count(), 1)
