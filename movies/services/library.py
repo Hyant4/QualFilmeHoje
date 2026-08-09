@@ -32,18 +32,8 @@ def _account_user(user):
     return user if getattr(user, "is_authenticated", False) else None
 
 
-@transaction.atomic
-def record_generation(
-    visitor_id,
-    title_data,
-    genre_id,
-    genre_name,
-    min_rating,
-    *,
-    user=None,
-):
-    """Atualiza um snapshot mínimo do TMDB e registra um sorteio."""
-
+def save_title_snapshot(title_data):
+    """Cria ou atualiza o snapshot mínimo de um título vindo do TMDB."""
     try:
         tmdb_id = int(title_data["id"])
     except (KeyError, TypeError, ValueError):
@@ -64,6 +54,24 @@ def record_generation(
             "vote_average": _parse_rating(title_data.get("vote_average")),
         },
     )
+    return title
+
+
+@transaction.atomic
+def record_generation(
+    visitor_id,
+    title_data,
+    genre_id,
+    genre_name,
+    min_rating,
+    *,
+    user=None,
+):
+    """Atualiza um snapshot mínimo do TMDB e registra um sorteio."""
+
+    title = save_title_snapshot(title_data)
+    if title is None:
+        return None
 
     account_user = _account_user(user)
     Generation.objects.create(

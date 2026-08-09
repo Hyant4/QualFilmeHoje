@@ -3,12 +3,61 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.test import SimpleTestCase
 
-from movies.services.tmdb import TMDBError, get_random_movie, get_random_title
+from movies.services.tmdb import (
+    TMDBError,
+    get_random_movie,
+    get_random_title,
+    get_recent_top_movies,
+    get_title_details,
+)
 
 
 class TMDBServiceTests(SimpleTestCase):
     def setUp(self):
         cache.clear()
+
+    @patch("movies.services.tmdb._get")
+    def test_recent_top_movies_are_normalised_and_limited(self, mock_get):
+        mock_get.return_value = {
+            "results": [
+                {
+                    "id": index,
+                    "title": f"Filme {index}",
+                    "release_date": "2026-01-01",
+                    "vote_average": 9.5 - index / 10,
+                    "vote_count": 500,
+                    "poster_path": f"/poster-{index}.jpg",
+                }
+                for index in range(1, 13)
+            ]
+        }
+
+        movies = get_recent_top_movies()
+
+        self.assertEqual(len(movies), 10)
+        self.assertEqual(movies[0]["media_type"], "movie")
+        self.assertEqual(movies[0]["poster_url"], "https://image.tmdb.org/t/p/w500/poster-1.jpg")
+        discover_call = mock_get.call_args
+        self.assertEqual(discover_call.args[0], "/discover/movie")
+        self.assertEqual(discover_call.kwargs["sort_by"], "vote_average.desc")
+        self.assertEqual(discover_call.kwargs["vote_count.gte"], 100)
+
+    @patch("movies.services.tmdb.get_streaming_groups", return_value=[])
+    @patch("movies.services.tmdb._fetch_title_extras")
+    def test_title_details_use_tmdb_id(self, mock_extras, mock_streaming):
+        mock_extras.return_value = {
+            "details": {"id": 88, "title": "Ficha teste"},
+            "videos": {"results": []},
+            "reviews": {"results": []},
+            "credits": {"crew": [], "cast": []},
+        }
+
+        title = get_title_details("movie", 88)
+
+        self.assertEqual(title["title"], "Ficha teste")
+        self.assertEqual(title["media_type"], "movie")
+        mock_extras.assert_called_once_with(88, "movie")
+        mock_streaming.assert_called_once_with("movie", 88)
 
     @patch("movies.services.tmdb._get")
     def test_empty_catalog_raises_readable_error(self, mock_get):

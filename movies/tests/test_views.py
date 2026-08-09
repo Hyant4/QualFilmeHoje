@@ -9,8 +9,22 @@ from movies.services.tmdb import TMDBError
 
 
 class MovieViewTests(TestCase):
+    @patch(
+        "movies.views.get_recent_top_movies",
+        return_value=[
+            {
+                "id": 99,
+                "media_type": "movie",
+                "title": "Filme em alta",
+                "release_date": "2026-01-02",
+                "vote_average": 9.1,
+            }
+        ],
+    )
     @patch("movies.views.get_genres", return_value=[{"id": 18, "name": "Drama"}])
-    def test_home_renders_generator_and_rating_slider(self, _mock_genres):
+    def test_home_renders_generator_rating_slider_and_trends(
+        self, _mock_genres, _mock_trends
+    ):
         response = self.client.get(reverse("movies:home"))
 
         self.assertEqual(response.status_code, 200)
@@ -26,6 +40,12 @@ class MovieViewTests(TestCase):
         self.assertContains(response, "tv-screen-glow")
         self.assertContains(response, "ualFilmeHoje")
         self.assertContains(response, 'class="hero-title-main"')
+        self.assertContains(response, "Tendências")
+        self.assertContains(response, "Filme em alta")
+        self.assertContains(
+            response,
+            reverse("movies:title_detail", args=("movie", 99)),
+        )
 
     @patch("movies.views.get_random_title")
     @patch("movies.views.get_genres", return_value=[{"id": 18, "name": "Drama"}])
@@ -153,16 +173,46 @@ class MovieViewTests(TestCase):
         self.assertFalse(response.json()["favorited"])
         self.assertFalse(Favorite.objects.filter(visitor_id=visitor_id, title=title).exists())
 
-    def test_favorite_rejects_title_outside_visitor_history(self):
-        Title.objects.create(tmdb_id=7, media_type=Title.TV, name="Série alheia")
+    def test_known_title_can_be_added_to_my_list_without_generation(self):
+        title = Title.objects.create(tmdb_id=7, media_type=Title.TV, name="Série conhecida")
 
         response = self.client.post(
             reverse("movies:toggle_favorite"),
             {"media_type": "tv", "tmdb_id": "7"},
         )
 
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(Favorite.objects.count(), 0)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["favorited"])
+        self.assertIn("minha lista", response.json()["message"])
+        self.assertTrue(Favorite.objects.filter(title=title).exists())
+
+    @patch("movies.views.get_title_details")
+    def test_trending_title_opens_own_details_page(self, mock_details):
+        mock_details.return_value = {
+            "id": 88,
+            "title": "Tendência teste",
+            "original_title": "Test trend",
+            "media_type": "movie",
+            "vote_average": 8.8,
+            "vote_count": 900,
+            "release_date": "2026-03-12",
+            "runtime": 110,
+            "genres": [{"name": "Drama"}],
+            "reviews": [],
+            "provider_groups": [],
+            "credit_sections": [],
+        }
+
+        response = self.client.get(
+            reverse("movies:title_detail", args=("movie", 88))
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tendência teste")
+        self.assertContains(response, "Informações do TMDB")
+        self.assertContains(response, "Adicionar à minha lista")
+        self.assertNotContains(response, 'class="hero"')
+        self.assertTrue(Title.objects.filter(tmdb_id=88, media_type="movie").exists())
 
     def test_favorite_endpoint_rejects_get(self):
         response = self.client.get(reverse("movies:toggle_favorite"))

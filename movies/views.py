@@ -1,17 +1,25 @@
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
-from .models import Generation, Title
+from .models import Title
 from .services.library import (
     get_library,
     is_favorite,
     record_generation,
+    save_title_snapshot,
     toggle_favorite,
 )
-from .services.tmdb import TMDBError, get_genres, get_random_title
+from .services.tmdb import (
+    TMDBError,
+    get_genres,
+    get_random_title,
+    get_recent_top_movies,
+    get_title_details,
+)
 
 DEFAULT_MIN_RATING = 6.0
 
@@ -25,6 +33,24 @@ def _safe_genres():
         except TMDBError as exc:
             errors.append(str(exc))
     return genre_sets, errors[0] if errors else None
+
+
+def _safe_trends():
+    try:
+        return get_recent_top_movies(), None
+    except TMDBError as exc:
+        return [], str(exc)
+
+
+def _safe_landing_data():
+    """Carrega filtros e tendências em paralelo para não atrasar a landing page."""
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        genres_future = executor.submit(_safe_genres)
+        trends_future = executor.submit(_safe_trends)
+        genre_sets, genres_error = genres_future.result()
+        trending_movies, trends_error = trends_future.result()
+    return genre_sets, genres_error, trending_movies, trends_error
 
 
 def _parse_filters(request):
@@ -73,13 +99,15 @@ def _genre_name(genre_sets, media_type, genre_id):
 
 
 def home(request):
-    genre_sets, error = _safe_genres()
+    genre_sets, error, trending_movies, trends_error = _safe_landing_data()
     context = {
         "movie_genres": genre_sets["movie"],
         "tv_genres": genre_sets["tv"],
         "error": error,
         "selected_media_type": "movie",
         "selected_min_rating": DEFAULT_MIN_RATING,
+        "trending_movies": trending_movies,
+        "trends_error": trends_error,
     }
     context.update(get_library(_visitor_id(request), user=request.user))
     return render(request, "movies/home.html", context)
@@ -120,7 +148,44 @@ def generate_movie(request):
 
     if genres_error and "error" not in context:
         context["error"] = genres_error
+    trending_movies, trends_error = _safe_trends()
+    context["trending_movies"] = trending_movies
+    context["trends_error"] = trends_error
     context.update(get_library(_visitor_id(request), user=request.user))
+    return render(request, "movies/home.html", context)
+
+
+@require_GET
+def title_detail(request, media_type, tmdb_id):
+    if media_type not in {Title.MOVIE, Title.TV}:
+        return render(
+            request,
+            "movies/home.html",
+            {
+                "is_detail_page": True,
+                "error": "Tipo de título inválido.",
+                "selected_media_type": "movie",
+            },
+            status=404,
+        )
+
+    context = {
+        "is_detail_page": True,
+        "selected_media_type": media_type,
+    }
+    try:
+        movie = get_title_details(media_type, tmdb_id)
+        visitor_id = _visitor_id(request, create=True)
+        saved_title = save_title_snapshot(movie)
+        movie["can_favorite"] = saved_title is not None
+        movie["is_favorite"] = is_favorite(
+            visitor_id,
+            saved_title,
+            user=request.user,
+        )
+        context["movie"] = movie
+    except TMDBError as exc:
+        context["error"] = str(exc)
     return render(request, "movies/home.html", context)
 
 
@@ -133,20 +198,12 @@ def toggle_title_favorite(request):
 
     visitor_id = _visitor_id(request, create=True)
     title = get_object_or_404(Title, media_type=media_type, tmdb_id=int(tmdb_id))
-    generation_lookup = (
-        {"user": request.user, "title": title}
-        if request.user.is_authenticated
-        else {"visitor_id": visitor_id, "user__isnull": True, "title": title}
-    )
-    if not Generation.objects.filter(**generation_lookup).exists():
-        return JsonResponse({"error": "Este título não pertence ao seu histórico."}, status=404)
-
     favorited = toggle_favorite(visitor_id, title, user=request.user)
     return JsonResponse(
         {
             "favorited": favorited,
             "message": (
-                "Adicionado aos favoritos." if favorited else "Removido dos favoritos."
+                "Adicionado à minha lista." if favorited else "Removido da minha lista."
             ),
         }
     )

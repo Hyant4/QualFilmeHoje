@@ -18,7 +18,7 @@
   <meta name="twitter:title" content="QualFilmeHoje — Sua próxima sessão">
   <meta name="twitter:description" content="Escolha o clima. A gente escolhe o filme.">
   <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
-  <title>QualFilmeHoje — Sua próxima sessão</title>
+  <title>{% if is_detail_page and movie %}{{ movie.title }} — QualFilmeHoje{% else %}QualFilmeHoje — Sua próxima sessão{% endif %}</title>
   <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
   <script src="{% static 'movies/js/site.js' %}" defer></script>
 </head>
-<body{% if error %} class="has-top-alert"{% endif %}>
+<body class="{% if error %}has-top-alert {% endif %}{% if is_detail_page %}detail-page{% endif %}">
   <header class="site-header">
     <div class="wrap">
       <nav class="nav" aria-label="Navegação principal">
@@ -49,7 +49,7 @@
           {% else %}
             <a href="{% url 'account_login' %}" class="nav-account">Entrar</a>
           {% endif %}
-          <a href="#gerador" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
+          <a href="{% if is_detail_page %}{% url 'movies:home' %}#gerador{% else %}#gerador{% endif %}" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
         </div>
       </nav>
     </div>
@@ -66,7 +66,7 @@
       <div class="alert" role="alert">
         <span class="alert-icon" aria-hidden="true">!</span>
         <div class="alert-copy">
-          <strong class="mono">Sorteio não concluído</strong>
+          <strong class="mono">{% if is_detail_page %}Título indisponível{% else %}Sorteio não concluído{% endif %}</strong>
           <p>{{ error }}</p>
         </div>
         <button class="alert-close" type="button" aria-label="Fechar aviso" data-alert-close>×</button>
@@ -75,6 +75,13 @@
   {% endif %}
 
   <main>
+    {% if is_detail_page %}
+      <div class="detail-navigation wrap">
+        <a class="nav-back" href="{% url 'movies:home' %}"><span aria-hidden="true">←</span> Voltar para a seleção</a>
+      </div>
+    {% endif %}
+
+    {% if not is_detail_page %}
     <section class="hero" id="gerador">
       <div class="wrap">
         <div class="hero-grid">
@@ -160,6 +167,69 @@
 
       </div>
     </section>
+    {% endif %}
+
+    {% if not is_detail_page %}
+      <section class="trends-section" aria-labelledby="trends-title" data-trends>
+        <div class="wrap">
+          <div class="section-head trends-head">
+            <div>
+              <p class="eyebrow">Em alta agora</p>
+              <h2 id="trends-title">Tendências</h2>
+              <p class="trends-description">Top 10 dos filmes lançados nos últimos 18 meses com as melhores notas da comunidade TMDB.</p>
+            </div>
+            {% if trending_movies|length > 1 %}
+              <div class="trends-controls" aria-label="Controles das tendências">
+                <button type="button" aria-label="Ver filmes anteriores" data-trends-prev>←</button>
+                <button type="button" aria-label="Ver próximos filmes" data-trends-next>→</button>
+              </div>
+            {% endif %}
+          </div>
+
+          {% if trending_movies %}
+            <div class="trends-viewport" tabindex="0" aria-label="Filmes em tendência. Use as setas para navegar." data-trends-viewport>
+              <div class="trends-track">
+                {% for trend in trending_movies %}
+                  <a class="trend-card" href="{% url 'movies:title_detail' trend.media_type trend.id %}" data-trend-card aria-label="Abrir informações de {{ trend.title }}">
+                    <span class="trend-rank mono" aria-hidden="true">{{ forloop.counter|stringformat:'02d' }}</span>
+                    <div class="trend-poster">
+                      {% if trend.poster_url %}
+                        <img src="{{ trend.poster_url }}" alt="Pôster de {{ trend.title }}" loading="lazy" width="500" height="750">
+                      {% else %}
+                        <div class="trend-placeholder marquee" aria-hidden="true">Q</div>
+                      {% endif %}
+                      <span class="trend-open" aria-hidden="true">Ver ficha →</span>
+                    </div>
+                    <div class="trend-copy">
+                      <span class="mono">Filme{% if trend.release_date %} · {{ trend.release_date|slice:':4' }}{% endif %}</span>
+                      <h3>{{ trend.title }}</h3>
+                      <p><i aria-hidden="true">★</i> {{ trend.vote_average|floatformat:1 }} <small>/10</small></p>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+          {% else %}
+            <div class="trends-empty">
+              <span class="mono">TENDÊNCIAS INDISPONÍVEIS</span>
+              <p>{{ trends_error|default:'Não foi possível carregar o ranking neste momento.' }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if is_detail_page and not movie %}
+      <section class="detail-empty">
+        <div class="wrap">
+          <p class="eyebrow">Ficha do título</p>
+          <h1>Não foi possível abrir este título.</h1>
+          <p>Volte para a página inicial e escolha outro filme.</p>
+          <a class="primary-link" href="{% url 'movies:home' %}">Explorar filmes</a>
+        </div>
+      </section>
+    {% endif %}
 
     {% if movie %}
       <section class="result-section" id="resultado" data-movie-result>
@@ -169,7 +239,7 @@
         <div class="wrap result-wrap">
           <div class="result-heading">
             <div class="result-title-block">
-              <p class="eyebrow">Sua sessão foi escolhida</p>
+              <p class="eyebrow">{% if is_detail_page %}Informações do TMDB{% else %}Sua sessão foi escolhida{% endif %}</p>
               <h2>{{ movie.title }}</h2>
               {% if movie.can_favorite %}
                 <form class="favorite-form" method="post" action="{% url 'movies:toggle_favorite' %}" data-favorite-form>
@@ -178,7 +248,7 @@
                   <input type="hidden" name="tmdb_id" value="{{ movie.id }}">
                   <button type="submit" class="favorite-button" aria-pressed="{% if movie.is_favorite %}true{% else %}false{% endif %}" data-favorite-button>
                     <span aria-hidden="true" data-favorite-icon>{% if movie.is_favorite %}★{% else %}☆{% endif %}</span>
-                    <span data-favorite-label>{% if movie.is_favorite %}Nos favoritos{% else %}Adicionar aos favoritos{% endif %}</span>
+                    <span data-favorite-label>{% if movie.is_favorite %}Na minha lista{% else %}Adicionar à minha lista{% endif %}</span>
                   </button>
                   <small class="favorite-feedback" aria-live="polite" data-favorite-feedback></small>
                 </form>
@@ -311,11 +381,12 @@
       </section>
     {% endif %}
 
+    {% if not is_detail_page %}
     {% if favorites or history %}
       <section class="library-section" id="minha-lista" aria-labelledby="library-title">
         <div class="wrap">
           <div class="section-head library-head">
-            <div><p class="eyebrow">Seu espaço</p><h2 id="library-title">Minha sessão</h2></div>
+            <div><p class="eyebrow">Seu espaço</p><h2 id="library-title">Minha lista</h2></div>
             <span class="mono">{% if user.is_authenticated %}Salvo na sua conta{% else %}Salvo neste navegador{% endif %}</span>
           </div>
 
@@ -323,12 +394,12 @@
             {% if favorites %}
               <section class="library-group" aria-labelledby="favorites-title">
                 <div class="library-group-heading">
-                  <h3 id="favorites-title">Favoritos</h3>
+                  <h3 id="favorites-title">Títulos salvos</h3>
                   <span class="mono">{{ favorites|length|stringformat:'02d' }}</span>
                 </div>
                 <div class="title-cards">
                   {% for favorite in favorites %}
-                    <article class="title-card" data-favorite-card="{{ favorite.title.media_type }}:{{ favorite.title.tmdb_id }}">
+                    <a class="title-card" href="{% url 'movies:title_detail' favorite.title.media_type favorite.title.tmdb_id %}" data-favorite-card="{{ favorite.title.media_type }}:{{ favorite.title.tmdb_id }}">
                       {% if favorite.title.poster_url %}
                         <img src="{{ favorite.title.poster_url }}" alt="Pôster de {{ favorite.title.name }}" loading="lazy">
                       {% else %}
@@ -339,7 +410,7 @@
                         <h4>{{ favorite.title.name }}</h4>
                         {% if favorite.title.vote_average is not None %}<small><i aria-hidden="true">★</i> {{ favorite.title.vote_average }}/10</small>{% endif %}
                       </div>
-                    </article>
+                    </a>
                   {% endfor %}
                 </div>
               </section>
@@ -353,11 +424,11 @@
                 </div>
                 <ol class="history-list">
                   {% for generation in history %}
-                    <li>
+                    <li><a class="history-link" href="{% url 'movies:title_detail' generation.title.media_type generation.title.tmdb_id %}">
                       <span class="history-index mono">{{ forloop.counter|stringformat:'02d' }}</span>
                       <div><h4>{{ generation.title.name }}</h4><p>{{ generation.genre_name|default:'Qualquer gênero' }} · nota {{ generation.min_rating }}+</p></div>
                       <time class="mono" datetime="{{ generation.created_at|date:'c' }}">{{ generation.created_at|date:'d/m · H:i' }}</time>
-                    </li>
+                    </a></li>
                   {% endfor %}
                 </ol>
               </section>
@@ -380,6 +451,7 @@
         </div>
       </div>
     </section>
+    {% endif %}
   </main>
 
   <footer class="site-footer">
@@ -388,7 +460,7 @@
         <a href="{% url 'movies:home' %}" class="brand-logo brand-logo-footer" aria-label="QualFilmeHoje — início">
           <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
         </a>
-        <a href="#gerador" class="text-link">Voltar ao topo ↑</a>
+        <a href="{% if is_detail_page %}#resultado{% else %}#gerador{% endif %}" class="text-link">Voltar ao topo ↑</a>
       </div>
       <div class="credits">
         <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>

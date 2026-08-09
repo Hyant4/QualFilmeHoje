@@ -8,6 +8,7 @@ import json
 import os
 import random
 from concurrent.futures import ThreadPoolExecutor
+from datetime import date, timedelta
 from functools import lru_cache
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -22,6 +23,7 @@ POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500"
 BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/w1280"
 DISCOVERY_CACHE_SECONDS = 10 * 60
 TITLE_CACHE_SECONDS = 12 * 60 * 60
+TRENDS_CACHE_SECONDS = 30 * 60
 MAX_STREAMING_CANDIDATES = 2
 
 
@@ -210,6 +212,117 @@ def _fetch_title_extras(title_id, media_type):
     return data
 
 
+def _build_title_payload(data, media_type, provider_groups=None, streaming_error=None):
+    """Converte a resposta detalhada do TMDB no formato usado pelas telas."""
+
+    title = dict(data["details"])
+    title["media_type"] = media_type
+    title["media_label"] = "Série" if media_type == "tv" else "Filme"
+    title["title"] = title.get("name") if media_type == "tv" else title.get("title")
+    title["original_title"] = (
+        title.get("original_name") if media_type == "tv" else title.get("original_title")
+    )
+    title["release_date"] = (
+        title.get("first_air_date") if media_type == "tv" else title.get("release_date")
+    )
+    if media_type == "tv":
+        runtimes = title.get("episode_run_time") or []
+        title["runtime"] = runtimes[0] if runtimes else None
+
+    title["poster_url"] = (
+        f"{POSTER_BASE_URL}{title['poster_path']}" if title.get("poster_path") else ""
+    )
+    title["backdrop_url"] = (
+        f"{BACKDROP_BASE_URL}{title['backdrop_path']}"
+        if title.get("backdrop_path")
+        else ""
+    )
+    title["provider_groups"] = provider_groups or []
+    if streaming_error:
+        title["streaming_error"] = streaming_error
+    title["trailer"] = _choose_trailer(data["videos"].get("results", []))
+    title["reviews"] = _normalise_reviews(data["reviews"].get("results", []))
+    title["credit_sections"] = _normalise_credits(
+        data["credits"], title, media_type
+    )
+    return title
+
+
+def get_title_details(media_type, title_id):
+    """Busca a ficha completa de um filme ou série pelo ID do TMDB."""
+
+    if media_type not in {"movie", "tv"}:
+        raise TMDBError("Tipo de título inválido.")
+    try:
+        title_id = int(title_id)
+    except (TypeError, ValueError) as error:
+        raise TMDBError("Título inválido.") from error
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        details_future = executor.submit(_fetch_title_extras, title_id, media_type)
+        streaming_future = executor.submit(get_streaming_groups, media_type, title_id)
+        data = details_future.result()
+        try:
+            provider_groups = streaming_future.result()
+            streaming_error = None
+        except WatchmodeError as error:
+            provider_groups = []
+            streaming_error = str(error)
+    return _build_title_payload(data, media_type, provider_groups, streaming_error)
+
+
+def get_recent_top_movies(limit=10):
+    """Retorna os filmes recentes mais bem avaliados com votos suficientes."""
+
+    limit = min(max(int(limit), 1), 20)
+    today = date.today()
+    cutoff = today - timedelta(days=548)
+    cache_key = f"tmdb:recent-top:v1:{today.isoformat()}:{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    data = _get(
+        "/discover/movie",
+        language="pt-BR",
+        include_adult="false",
+        include_video="false",
+        region="BR",
+        **{
+            "primary_release_date.gte": cutoff.isoformat(),
+            "primary_release_date.lte": today.isoformat(),
+            "vote_count.gte": 100,
+            "sort_by": "vote_average.desc",
+        },
+    )
+    movies = []
+    for item in data.get("results", []):
+        if not item.get("id") or not item.get("title"):
+            continue
+        movies.append(
+            {
+                "id": item["id"],
+                "media_type": "movie",
+                "title": item["title"],
+                "original_title": item.get("original_title") or "",
+                "overview": item.get("overview") or "",
+                "release_date": item.get("release_date") or "",
+                "vote_average": _normalise_rating(item.get("vote_average")),
+                "vote_count": item.get("vote_count") or 0,
+                "poster_url": (
+                    f"{POSTER_BASE_URL}{item['poster_path']}"
+                    if item.get("poster_path")
+                    else ""
+                ),
+            }
+        )
+        if len(movies) == limit:
+            break
+
+    cache.set(cache_key, movies, TRENDS_CACHE_SECONDS)
+    return movies
+
+
 def _discovery_cache_key(media_type, genre_id, min_rating):
     genre_key = genre_id or "all"
     rating_key = f"{min_rating:.1f}".replace(".", "-")
@@ -292,36 +405,7 @@ def get_random_title(media_type="movie", genre_id=None, min_rating=0):
             data = first_details_future.result()
         else:
             data = _fetch_title_extras(title_id, media_type)
-    title = data["details"]
-
-    title["media_type"] = media_type
-    title["media_label"] = "Série" if media_type == "tv" else "Filme"
-    title["title"] = title.get("name") if media_type == "tv" else title.get("title")
-    title["original_title"] = (
-        title.get("original_name") if media_type == "tv" else title.get("original_title")
-    )
-    title["release_date"] = (
-        title.get("first_air_date") if media_type == "tv" else title.get("release_date")
-    )
-    if media_type == "tv":
-        runtimes = title.get("episode_run_time") or []
-        title["runtime"] = runtimes[0] if runtimes else None
-
-    title["poster_url"] = (
-        f"{POSTER_BASE_URL}{title['poster_path']}" if title.get("poster_path") else ""
-    )
-    title["backdrop_url"] = (
-        f"{BACKDROP_BASE_URL}{title['backdrop_path']}" if title.get("backdrop_path") else ""
-    )
-    title["provider_groups"] = provider_groups
-    if streaming_error:
-        title["streaming_error"] = streaming_error
-    title["trailer"] = _choose_trailer(data["videos"].get("results", []))
-    title["reviews"] = _normalise_reviews(data["reviews"].get("results", []))
-    title["credit_sections"] = _normalise_credits(
-        data["credits"], title, media_type
-    )
-    return title
+    return _build_title_payload(data, media_type, provider_groups, streaming_error)
 
 
 def get_random_movie(genre_id=None, min_rating=0):
