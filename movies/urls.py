@@ -1,0 +1,11 @@
+from django.urls import path
+
+from . import views
+
+app_name = "movies"
+
+urlpatterns = [
+    path("", views.home, name="home"),
+    path("gerar/", views.generate_movie, name="generate_movie"),
+    path("favoritos/alternar/", views.toggle_title_favorite, name="toggle_favorite"),
+]

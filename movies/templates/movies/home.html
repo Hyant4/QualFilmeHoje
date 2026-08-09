@@ -1,0 +1,361 @@
+{% load static %}
+{% static 'movies/images/og-qualfilmehoje.png' as og_image %}
+{% static 'movies/images/hero-pov.webp' as hero_image %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Encontre um filme ou uma série por gênero e nota e descubra onde assistir no Brasil.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="QualFilmeHoje — Sua próxima sessão">
+  <meta property="og:description" content="Escolha o clima. A gente escolhe o filme.">
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="QualFilmeHoje — Sua próxima sessão">
+  <meta name="twitter:description" content="Escolha o clima. A gente escolhe o filme.">
+  <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
+  <title>QualFilmeHoje — Sua próxima sessão</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="image" href="{{ hero_image }}" type="image/webp">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
+  <script src="{% static 'movies/js/site.js' %}" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <nav class="nav" aria-label="Navegação principal">
+        <a href="{% url 'movies:home' %}" class="brand-logo" aria-label="QualFilmeHoje — início">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
+        </a>
+        <a href="#gerador" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="gerador">
+      <div class="wrap">
+        <div class="hero-grid">
+          <div class="hero-intro">
+            <p class="eyebrow">Sessão de hoje · Brasil</p>
+            <h1>Qual <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span><br><em>hoje?</em></h1>
+            <div class="hero-copy">
+              <p>Sem rolar catálogo por meia hora. Escolha um gênero e a nota mínima — a gente encontra a sua próxima sessão.</p>
+              <p class="hero-note"><span></span> Filmes e séries disponíveis para assistir no Brasil</p>
+            </div>
+          </div>
+          <figure class="hero-media">
+            <img src="{{ hero_image }}" alt="Pessoa no sofá apontando o controle para uma televisão" width="1536" height="1024" fetchpriority="high">
+            <span class="tv-screen-glow" aria-hidden="true"></span>
+            <figcaption class="tv-screen-ui">
+              <span class="tv-wordmark" aria-label="QualFilmeHoje">
+                <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="32" height="32" aria-hidden="true">
+                <strong aria-hidden="true">ualFilmeHoje</strong>
+              </span>
+              <span class="tv-loader" aria-hidden="true"></span>
+              <small>Escolhendo sua sessão</small>
+            </figcaption>
+          </figure>
+        </div>
+
+        <div class="media-picker" role="tablist" aria-label="Tipo de conteúdo">
+          <button type="button" role="tab" aria-controls="genre-movie" aria-selected="{% if selected_media_type != 'tv' %}true{% else %}false{% endif %}" data-media-option="movie">Filmes</button>
+          <button type="button" role="tab" aria-controls="genre-tv" aria-selected="{% if selected_media_type == 'tv' %}true{% else %}false{% endif %}" data-media-option="tv">Séries</button>
+        </div>
+
+        <form class="generator" method="post" action="{% url 'movies:generate_movie' %}" data-generator-form>
+          {% csrf_token %}
+          <input type="hidden" name="media_type" value="{{ selected_media_type|default:'movie' }}" data-media-input>
+          <div class="field genre-field" id="genre-movie" role="tabpanel" data-genre-field="movie" {% if selected_media_type == 'tv' %}hidden{% endif %}>
+            <label for="movie_genre_id">Gênero do filme</label>
+            <div class="select-wrap">
+              <select id="movie_genre_id" name="genre_id" {% if selected_media_type == 'tv' %}disabled{% endif %}>
+                <option value="">Qualquer gênero</option>
+                {% for genre in movie_genres %}
+                  <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="field genre-field" id="genre-tv" role="tabpanel" data-genre-field="tv" {% if selected_media_type != 'tv' %}hidden{% endif %}>
+            <label for="tv_genre_id">Gênero da série</label>
+            <div class="select-wrap">
+              <select id="tv_genre_id" name="genre_id" {% if selected_media_type != 'tv' %}disabled{% endif %}>
+                <option value="">Qualquer gênero</option>
+                {% for genre in tv_genres %}
+                  <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="field score-field">
+            <div class="score-label">
+              <label for="min_rating">Nota mínima no TMDB</label>
+              <output for="min_rating" id="ratingOutput">{{ selected_min_rating|default:6|floatformat:1 }}+</output>
+            </div>
+            <input
+              type="range"
+              id="min_rating"
+              name="min_rating"
+              min="0"
+              max="10"
+              step="0.1"
+              value="{{ selected_min_rating|default:6|stringformat:'s' }}"
+              aria-describedby="ratingScale"
+            >
+            <div class="range-scale mono" id="ratingScale" aria-hidden="true">
+              <span>0</span><span>5</span><span>10</span>
+            </div>
+          </div>
+
+          <button class="generate-button" type="submit" data-generate-button>
+            <span class="button-label">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </form>
+
+        {% if error %}
+          <div class="alert" role="alert">
+            <span class="mono">ERRO</span>
+            <p>{{ error }}</p>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if movie %}
+      <section class="result-section" id="resultado" data-movie-result>
+        {% if movie.backdrop_url %}
+          <div class="backdrop" style="background-image: url('{{ movie.backdrop_url }}')" aria-hidden="true"></div>
+        {% endif %}
+        <div class="wrap result-wrap">
+          <div class="result-heading">
+            <div class="result-title-block">
+              <p class="eyebrow">Sua sessão foi escolhida</p>
+              <h2>{{ movie.title }}</h2>
+              {% if movie.can_favorite %}
+                <form class="favorite-form" method="post" action="{% url 'movies:toggle_favorite' %}" data-favorite-form>
+                  {% csrf_token %}
+                  <input type="hidden" name="media_type" value="{{ movie.media_type }}">
+                  <input type="hidden" name="tmdb_id" value="{{ movie.id }}">
+                  <button type="submit" class="favorite-button" aria-pressed="{% if movie.is_favorite %}true{% else %}false{% endif %}" data-favorite-button>
+                    <span aria-hidden="true" data-favorite-icon>{% if movie.is_favorite %}★{% else %}☆{% endif %}</span>
+                    <span data-favorite-label>{% if movie.is_favorite %}Nos favoritos{% else %}Adicionar aos favoritos{% endif %}</span>
+                  </button>
+                  <small class="favorite-feedback" aria-live="polite" data-favorite-feedback></small>
+                </form>
+              {% endif %}
+            </div>
+            <div class="tmdb-score" aria-label="Nota {{ movie.vote_average|floatformat:1 }} de 10 no TMDB">
+              <span class="score-kicker">Avaliação do TMDB</span>
+              <div class="score-value"><span class="score-star" aria-hidden="true">★</span><strong>{{ movie.vote_average|floatformat:1 }}</strong><span>/10</span></div>
+              <small>{{ movie.vote_count|default:0 }} avaliações</small>
+            </div>
+          </div>
+
+          <div class="movie-layout">
+            <aside class="poster-column">
+              {% if movie.poster_url %}
+                <img class="movie-poster" src="{{ movie.poster_url }}" alt="Pôster de {{ movie.title }}">
+              {% else %}
+                <div class="poster-placeholder marquee">{{ movie.title }}</div>
+              {% endif %}
+              <dl class="quick-facts">
+                <div><dt>Ano</dt><dd>{{ movie.release_date|slice:':4'|default:'—' }}</dd></div>
+                <div><dt>{% if movie.media_type == 'tv' %}Por episódio{% else %}Duração{% endif %}</dt><dd>{% if movie.runtime %}{{ movie.runtime }} min{% else %}—{% endif %}</dd></div>
+                {% if movie.media_type == 'tv' %}<div><dt>Temporadas</dt><dd>{{ movie.number_of_seasons|default:'—' }}</dd></div>{% endif %}
+                <div><dt>Avaliações</dt><dd>{{ movie.vote_count|default:0 }}</dd></div>
+              </dl>
+            </aside>
+
+            <div class="movie-content">
+              {% if movie.tagline %}<p class="tagline">“{{ movie.tagline }}”</p>{% endif %}
+              <div class="genre-list" aria-label="Gêneros">
+                {% for genre in movie.genres %}<span>{{ genre.name }}</span>{% endfor %}
+              </div>
+
+              <dl class="people-details" aria-label="Ficha principal de {{ movie.title }}">
+                {% for section in movie.credit_sections %}
+                  {% if section.names %}
+                    <div>
+                      <dt>{{ section.label }}</dt>
+                      <dd>{% for name in section.names %}<span>{{ name }}</span>{% if not forloop.last %}<i aria-hidden="true">·</i>{% endif %}{% endfor %}</dd>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </dl>
+
+              <div class="tabs" data-tabs>
+                <div class="tab-list" role="tablist" aria-label="Informações de {{ movie.title }}">
+                  <button role="tab" id="tab-sinopse" aria-controls="panel-sinopse" aria-selected="true" data-tab="sinopse">Sinopse</button>
+                  <button role="tab" id="tab-trailer" aria-controls="panel-trailer" aria-selected="false" tabindex="-1" data-tab="trailer">Trailer</button>
+                  <button role="tab" id="tab-reviews" aria-controls="panel-reviews" aria-selected="false" tabindex="-1" data-tab="reviews">Reviews <span>{{ movie.reviews|length }}</span></button>
+                  <button role="tab" id="tab-streaming" aria-controls="panel-streaming" aria-selected="false" tabindex="-1" data-tab="streaming">Onde assistir</button>
+                </div>
+
+                <div class="tab-panel" id="panel-sinopse" role="tabpanel" aria-labelledby="tab-sinopse" data-panel="sinopse">
+                  <p class="overview">{{ movie.overview|default:'Sinopse indisponível em português.' }}</p>
+                </div>
+
+                <div class="tab-panel" id="panel-trailer" role="tabpanel" aria-labelledby="tab-trailer" data-panel="trailer" hidden>
+                  {% if movie.trailer %}
+                    <div class="video-frame">
+                      <iframe
+                        src="{{ movie.trailer.embed_url }}"
+                        title="Trailer de {{ movie.title }}"
+                        loading="lazy"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allowfullscreen
+                      ></iframe>
+                    </div>
+                    <a class="text-link" href="{{ movie.trailer.youtube_url }}" target="_blank" rel="noopener">Abrir trailer no YouTube ↗</a>
+                  {% else %}
+                    <div class="empty-state"><span class="mono">SEM TRAILER</span><p>O TMDB ainda não cadastrou um trailer do YouTube para este título.</p></div>
+                  {% endif %}
+                </div>
+
+                <div class="tab-panel reviews-panel" id="panel-reviews" role="tabpanel" aria-labelledby="tab-reviews" data-panel="reviews" hidden>
+                  {% if movie.reviews %}
+                    <div class="reviews-intro">
+                      <p>Opiniões publicadas pela comunidade do TMDB. Os textos são exibidos no idioma original.</p>
+                    </div>
+                    <div class="reviews-list">
+                      {% for review in movie.reviews %}
+                        <article class="review-card">
+                          <header>
+                            <div class="review-avatar" aria-hidden="true">{{ review.author|first|upper }}</div>
+                            <div><h3>{{ review.author }}</h3><span class="mono">Review TMDB</span></div>
+                            {% if review.rating is not None %}<strong>{{ review.rating|floatformat:1 }}/10</strong>{% endif %}
+                          </header>
+                          <p>{{ review.content|truncatechars:520 }}</p>
+                          {% if review.url %}<a class="text-link" href="{{ review.url }}" target="_blank" rel="noopener">Ler review completa ↗</a>{% endif %}
+                        </article>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <div class="empty-state"><span class="mono">SEM REVIEWS</span><p>A comunidade do TMDB ainda não publicou reviews para este título.</p></div>
+                  {% endif %}
+                </div>
+
+                <div class="tab-panel" id="panel-streaming" role="tabpanel" aria-labelledby="tab-streaming" data-panel="streaming" hidden>
+                  {% if movie.provider_groups %}
+                    <div class="provider-groups">
+                      {% for group in movie.provider_groups %}
+                        <section class="provider-group">
+                          <h3>{{ group.label }}</h3>
+                          <div class="providers">
+                            {% for provider in group.providers %}
+                              <a class="provider" href="{{ provider.web_url }}" target="_blank" rel="noopener" aria-label="Abrir {{ movie.title }} no {{ provider.provider_name }}">
+                                {% if provider.logo_url %}<img src="{{ provider.logo_url }}" alt="" loading="lazy">{% endif %}
+                                <span><strong>{{ provider.provider_name }}</strong>{% if provider.format %}<small>{{ provider.format }}</small>{% endif %}</span>
+                                <i aria-hidden="true">↗</i>
+                              </a>
+                            {% endfor %}
+                          </div>
+                        </section>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <div class="empty-state"><span class="mono">LINK INDISPONÍVEL</span><p>{% if movie.streaming_error %}{{ movie.streaming_error }}{% else %}A Watchmode ainda não possui um link direto para este título no Brasil.{% endif %}</p></div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if favorites or history %}
+      <section class="library-section" id="minha-lista" aria-labelledby="library-title">
+        <div class="wrap">
+          <div class="section-head library-head">
+            <div><p class="eyebrow">Seu espaço</p><h2 id="library-title">Minha sessão</h2></div>
+            <span class="mono">Salvo neste navegador</span>
+          </div>
+
+          <div class="library-columns">
+            {% if favorites %}
+              <section class="library-group" aria-labelledby="favorites-title">
+                <div class="library-group-heading">
+                  <h3 id="favorites-title">Favoritos</h3>
+                  <span class="mono">{{ favorites|length|stringformat:'02d' }}</span>
+                </div>
+                <div class="title-cards">
+                  {% for favorite in favorites %}
+                    <article class="title-card" data-favorite-card="{{ favorite.title.media_type }}:{{ favorite.title.tmdb_id }}">
+                      {% if favorite.title.poster_url %}
+                        <img src="{{ favorite.title.poster_url }}" alt="Pôster de {{ favorite.title.name }}" loading="lazy">
+                      {% else %}
+                        <div class="title-card-placeholder" aria-hidden="true">Q</div>
+                      {% endif %}
+                      <div>
+                        <span class="mono">{% if favorite.title.media_type == 'tv' %}Série{% else %}Filme{% endif %}{% if favorite.title.release_year %} · {{ favorite.title.release_year }}{% endif %}</span>
+                        <h4>{{ favorite.title.name }}</h4>
+                        {% if favorite.title.vote_average is not None %}<small><i aria-hidden="true">★</i> {{ favorite.title.vote_average }}/10</small>{% endif %}
+                      </div>
+                    </article>
+                  {% endfor %}
+                </div>
+              </section>
+            {% endif %}
+
+            {% if history %}
+              <section class="library-group" aria-labelledby="history-title">
+                <div class="library-group-heading">
+                  <h3 id="history-title">Últimos sorteios</h3>
+                  <span class="mono">{{ history|length|stringformat:'02d' }}</span>
+                </div>
+                <ol class="history-list">
+                  {% for generation in history %}
+                    <li>
+                      <span class="history-index mono">{{ forloop.counter|stringformat:'02d' }}</span>
+                      <div><h4>{{ generation.title.name }}</h4><p>{{ generation.genre_name|default:'Qualquer gênero' }} · nota {{ generation.min_rating }}+</p></div>
+                      <time class="mono" datetime="{{ generation.created_at|date:'c' }}">{{ generation.created_at|date:'d/m · H:i' }}</time>
+                    </li>
+                  {% endfor %}
+                </ol>
+              </section>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="how-it-works" id="como-funciona">
+      <div class="wrap">
+        <div class="section-head">
+          <div><p class="eyebrow">Sem perder tempo</p><h2>Da indecisão ao play</h2></div>
+          <span class="mono">03 passos · 01 escolha</span>
+        </div>
+        <div class="steps">
+          <article><span class="mono">01</span><h3>Escolha o clima</h3><p>Selecione filme ou série, gênero e a nota mínima desejada.</p></article>
+          <article><span class="mono">02</span><h3>Receba uma sessão</h3><p>O sorteio busca um título disponível em serviços do Brasil.</p></article>
+          <article><span class="mono">03</span><h3>Assista sem dúvida</h3><p>Veja trailer, reviews e onde assistir antes de apertar o play.</p></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-row">
+        <a href="{% url 'movies:home' %}" class="brand-logo brand-logo-footer" aria-label="QualFilmeHoje — início">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
+        </a>
+        <a href="#gerador" class="text-link">Voltar ao topo ↑</a>
+      </div>
+      <div class="credits">
+        <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+        <p>Dados e imagens por <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>. Disponibilidade por <a href="https://www.justwatch.com/br" target="_blank" rel="noopener">JustWatch</a>; links diretos por <a href="https://www.watchmode.com/" target="_blank" rel="noopener">Watchmode</a>.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
