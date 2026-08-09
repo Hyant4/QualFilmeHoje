@@ -218,6 +218,55 @@
           {% endif %}
         </div>
       </section>
+
+      <section class="trends-section" aria-labelledby="series-trends-title" data-trends>
+        <div class="wrap">
+          <div class="section-head trends-head">
+            <div>
+              <p class="eyebrow">Em alta agora</p>
+              <h2 id="series-trends-title">Top 10 séries</h2>
+              <p class="trends-description">As séries lançadas nos últimos 30 dias com as melhores notas da comunidade TMDB.</p>
+            </div>
+            {% if trending_series|length > 1 %}
+              <div class="trends-controls" aria-label="Controles das tendências de séries">
+                <button type="button" aria-label="Ver séries anteriores" data-trends-prev>←</button>
+                <button type="button" aria-label="Ver próximas séries" data-trends-next>→</button>
+              </div>
+            {% endif %}
+          </div>
+
+          {% if trending_series %}
+            <div class="trends-viewport" tabindex="0" aria-label="Séries em tendência. Use as setas para navegar." data-trends-viewport>
+              <div class="trends-track">
+                {% for trend in trending_series %}
+                  <a class="trend-card" href="{% url 'movies:title_detail' trend.media_type trend.id %}" data-trend-card aria-label="Abrir informações de {{ trend.title }}">
+                    <span class="trend-rank mono" aria-hidden="true">{{ forloop.counter|stringformat:'02d' }}</span>
+                    <div class="trend-poster">
+                      {% if trend.poster_url %}
+                        <img src="{{ trend.poster_url }}" alt="Pôster de {{ trend.title }}" loading="lazy" width="500" height="750">
+                      {% else %}
+                        <div class="trend-placeholder marquee" aria-hidden="true">Q</div>
+                      {% endif %}
+                      <span class="trend-open" aria-hidden="true">Ver ficha →</span>
+                    </div>
+                    <div class="trend-copy">
+                      <span class="mono">Série{% if trend.release_date %} · {{ trend.release_date|slice:':4' }}{% endif %}</span>
+                      <h3>{{ trend.title }}</h3>
+                      <p><i aria-hidden="true">★</i> {{ trend.vote_average|floatformat:1 }} <small>/10</small></p>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+          {% else %}
+            <div class="trends-empty">
+              <span class="mono">SÉRIES INDISPONÍVEIS</span>
+              <p>{{ series_trends_error|default:'Não foi possível carregar o ranking de séries neste momento.' }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
     {% endif %}
 
     {% if is_detail_page and not movie %}

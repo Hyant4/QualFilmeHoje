@@ -9,6 +9,7 @@ from movies.services.tmdb import (
     get_random_movie,
     get_random_title,
     get_recent_top_movies,
+    get_recent_top_series,
     get_title_details,
 )
 
@@ -46,6 +47,35 @@ class TMDBServiceTests(SimpleTestCase):
         newest = date.fromisoformat(discover_call.kwargs["primary_release_date.lte"])
         self.assertEqual((newest - oldest).days, 30)
         self.assertNotIn("region", discover_call.kwargs)
+
+    @patch("movies.services.tmdb._get")
+    def test_recent_top_series_are_normalised_and_limited(self, mock_get):
+        mock_get.return_value = {
+            "results": [
+                {
+                    "id": index,
+                    "name": f"Série {index}",
+                    "original_name": f"Show {index}",
+                    "first_air_date": "2026-01-01",
+                    "vote_average": 9.5 - index / 10,
+                    "vote_count": 300,
+                    "poster_path": f"/series-{index}.jpg",
+                }
+                for index in range(1, 13)
+            ]
+        }
+
+        series = get_recent_top_series()
+
+        self.assertEqual(len(series), 10)
+        self.assertEqual(series[0]["media_type"], "tv")
+        self.assertEqual(series[0]["title"], "Série 1")
+        self.assertEqual(series[0]["release_date"], "2026-01-01")
+        discover_call = mock_get.call_args
+        self.assertEqual(discover_call.args[0], "/discover/tv")
+        oldest = date.fromisoformat(discover_call.kwargs["first_air_date.gte"])
+        newest = date.fromisoformat(discover_call.kwargs["first_air_date.lte"])
+        self.assertEqual((newest - oldest).days, 30)
 
     @patch("movies.services.tmdb.get_streaming_groups", return_value=[])
     @patch("movies.services.tmdb._fetch_title_extras")

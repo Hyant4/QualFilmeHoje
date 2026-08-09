@@ -10,6 +10,18 @@ from movies.services.tmdb import TMDBError
 
 class MovieViewTests(TestCase):
     @patch(
+        "movies.views.get_recent_top_series",
+        return_value=[
+            {
+                "id": 77,
+                "media_type": "tv",
+                "title": "Série em alta",
+                "release_date": "2026-01-03",
+                "vote_average": 8.9,
+            }
+        ],
+    )
+    @patch(
         "movies.views.get_recent_top_movies",
         return_value=[
             {
@@ -23,7 +35,7 @@ class MovieViewTests(TestCase):
     )
     @patch("movies.views.get_genres", return_value=[{"id": 18, "name": "Drama"}])
     def test_home_renders_generator_rating_slider_and_trends(
-        self, _mock_genres, _mock_trends
+        self, _mock_genres, _mock_movie_trends, _mock_series_trends
     ):
         response = self.client.get(reverse("movies:home"))
 
@@ -45,6 +57,12 @@ class MovieViewTests(TestCase):
         self.assertContains(
             response,
             reverse("movies:title_detail", args=("movie", 99)),
+        )
+        self.assertContains(response, "Top 10 séries")
+        self.assertContains(response, "Série em alta")
+        self.assertContains(
+            response,
+            reverse("movies:title_detail", args=("tv", 77)),
         )
 
     @patch("movies.views.get_random_title")

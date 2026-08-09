@@ -18,6 +18,7 @@ from .services.tmdb import (
     get_genres,
     get_random_title,
     get_recent_top_movies,
+    get_recent_top_series,
     get_title_details,
 )
 
@@ -36,10 +37,20 @@ def _safe_genres():
 
 
 def _safe_trends():
-    try:
-        return get_recent_top_movies(), None
-    except TMDBError as exc:
-        return [], str(exc)
+    results = {"movie": [], "tv": []}
+    errors = {"movie": None, "tv": None}
+    getters = {"movie": get_recent_top_movies, "tv": get_recent_top_series}
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {
+            media_type: executor.submit(getter)
+            for media_type, getter in getters.items()
+        }
+        for media_type, future in futures.items():
+            try:
+                results[media_type] = future.result()
+            except TMDBError as exc:
+                errors[media_type] = str(exc)
+    return results, errors
 
 
 def _safe_landing_data():
@@ -49,8 +60,8 @@ def _safe_landing_data():
         genres_future = executor.submit(_safe_genres)
         trends_future = executor.submit(_safe_trends)
         genre_sets, genres_error = genres_future.result()
-        trending_movies, trends_error = trends_future.result()
-    return genre_sets, genres_error, trending_movies, trends_error
+        trends, trends_errors = trends_future.result()
+    return genre_sets, genres_error, trends, trends_errors
 
 
 def _parse_filters(request):
@@ -99,15 +110,17 @@ def _genre_name(genre_sets, media_type, genre_id):
 
 
 def home(request):
-    genre_sets, error, trending_movies, trends_error = _safe_landing_data()
+    genre_sets, error, trends, trends_errors = _safe_landing_data()
     context = {
         "movie_genres": genre_sets["movie"],
         "tv_genres": genre_sets["tv"],
         "error": error,
         "selected_media_type": "movie",
         "selected_min_rating": DEFAULT_MIN_RATING,
-        "trending_movies": trending_movies,
-        "trends_error": trends_error,
+        "trending_movies": trends["movie"],
+        "trending_series": trends["tv"],
+        "trends_error": trends_errors["movie"],
+        "series_trends_error": trends_errors["tv"],
     }
     context.update(get_library(_visitor_id(request), user=request.user))
     return render(request, "movies/home.html", context)
@@ -148,9 +161,11 @@ def generate_movie(request):
 
     if genres_error and "error" not in context:
         context["error"] = genres_error
-    trending_movies, trends_error = _safe_trends()
-    context["trending_movies"] = trending_movies
-    context["trends_error"] = trends_error
+    trends, trends_errors = _safe_trends()
+    context["trending_movies"] = trends["movie"]
+    context["trending_series"] = trends["tv"]
+    context["trends_error"] = trends_errors["movie"]
+    context["series_trends_error"] = trends_errors["tv"]
     context.update(get_library(_visitor_id(request), user=request.user))
     return render(request, "movies/home.html", context)
 

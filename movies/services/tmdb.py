@@ -273,29 +273,35 @@ def get_title_details(media_type, title_id):
     return _build_title_payload(data, media_type, provider_groups, streaming_error)
 
 
-def get_recent_top_movies(limit=10):
-    """Retorna os filmes recentes mais bem avaliados com votos suficientes."""
+def _get_recent_top_titles(media_type, limit=10):
+    """Retorna filmes ou séries recentes com as melhores avaliações."""
+
+    if media_type not in {"movie", "tv"}:
+        raise TMDBError("Tipo de título inválido.")
 
     limit = min(max(int(limit), 1), 20)
     today = date.today()
     cutoff = today - timedelta(days=RECENT_RELEASE_DAYS)
-    cache_key = f"tmdb:recent-top:v4:{today.isoformat()}:{limit}"
+    cache_key = f"tmdb:recent-top:v5:{media_type}:{today.isoformat()}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
-    data = _get(
-        "/discover/movie",
-        language="pt-BR",
-        include_adult="false",
-        include_video="false",
-        **{
-            "primary_release_date.gte": cutoff.isoformat(),
-            "primary_release_date.lte": today.isoformat(),
-            "vote_count.gte": TRENDS_MIN_VOTES,
-            "sort_by": "vote_average.desc",
-        },
-    )
+    date_field = "primary_release_date" if media_type == "movie" else "first_air_date"
+    filters = {
+        "language": "pt-BR",
+        "include_adult": "false",
+        f"{date_field}.gte": cutoff.isoformat(),
+        f"{date_field}.lte": today.isoformat(),
+        "vote_count.gte": TRENDS_MIN_VOTES,
+        "sort_by": "vote_average.desc",
+    }
+    if media_type == "movie":
+        filters["include_video"] = "false"
+    else:
+        filters["include_null_first_air_dates"] = "false"
+
+    data = _get(f"/discover/{media_type}", **filters)
     ranked_results = sorted(
         data.get("results", []),
         key=lambda item: (
@@ -304,18 +310,29 @@ def get_recent_top_movies(limit=10):
         ),
         reverse=True,
     )
-    movies = []
+    titles = []
     for item in ranked_results:
-        if not item.get("id") or not item.get("title"):
+        title = item.get("title") if media_type == "movie" else item.get("name")
+        if not item.get("id") or not title:
             continue
-        movies.append(
+        titles.append(
             {
                 "id": item["id"],
-                "media_type": "movie",
-                "title": item["title"],
-                "original_title": item.get("original_title") or "",
+                "media_type": media_type,
+                "title": title,
+                "original_title": (
+                    item.get("original_title")
+                    if media_type == "movie"
+                    else item.get("original_name")
+                )
+                or "",
                 "overview": item.get("overview") or "",
-                "release_date": item.get("release_date") or "",
+                "release_date": (
+                    item.get("release_date")
+                    if media_type == "movie"
+                    else item.get("first_air_date")
+                )
+                or "",
                 "vote_average": _normalise_rating(item.get("vote_average")),
                 "vote_count": item.get("vote_count") or 0,
                 "poster_url": (
@@ -325,11 +342,19 @@ def get_recent_top_movies(limit=10):
                 ),
             }
         )
-        if len(movies) == limit:
+        if len(titles) == limit:
             break
 
-    cache.set(cache_key, movies, TRENDS_CACHE_SECONDS)
-    return movies
+    cache.set(cache_key, titles, TRENDS_CACHE_SECONDS)
+    return titles
+
+
+def get_recent_top_movies(limit=10):
+    return _get_recent_top_titles("movie", limit)
+
+
+def get_recent_top_series(limit=10):
+    return _get_recent_top_titles("tv", limit)
 
 
 def _discovery_cache_key(media_type, genre_id, min_rating):
