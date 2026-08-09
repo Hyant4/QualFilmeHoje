@@ -1,0 +1,53 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0a0a">
+  <meta name="description" content="Acesse sua conta do QualFilmeHoje e leve seus favoritos com você.">
+  <title>{% block head_title %}Conta{% endblock %} — QualFilmeHoje</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
+</head>
+<body class="auth-page">
+  <header class="site-header">
+    <div class="wrap">
+      <nav class="nav" aria-label="Navegação da conta">
+        <a href="{% url 'movies:home' %}" class="brand-logo" aria-label="QualFilmeHoje — início">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
+        </a>
+        <a href="{% url 'movies:home' %}" class="nav-back"><span aria-hidden="true">←</span> Voltar ao gerador</a>
+      </nav>
+    </div>
+  </header>
+
+  {% if messages %}
+    <div class="auth-messages wrap" aria-live="polite">
+      {% for message in messages %}<p class="auth-message {{ message.tags }}">{{ message }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <main class="auth-main">
+    <div class="wrap auth-layout">
+      <section class="auth-intro" aria-labelledby="auth-intro-title">
+        <p class="eyebrow">Sua sessão, em qualquer tela</p>
+        <h1 id="auth-intro-title">Escolha.<br><em>Salve.</em><br>Assista.</h1>
+        <p>Entre para manter seus filmes, séries e últimos sorteios disponíveis quando trocar de navegador ou dispositivo.</p>
+        <ul class="auth-benefits">
+          <li><span aria-hidden="true">01</span> Favoritos ligados à sua conta</li>
+          <li><span aria-hidden="true">02</span> Histórico preservado no primeiro login</li>
+          <li><span aria-hidden="true">03</span> Acesso rápido com Google ou senha</li>
+        </ul>
+      </section>
+
+      <div class="auth-panel">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </main>
+  {% block extra_body %}{% endblock %}
+</body>
+</html>

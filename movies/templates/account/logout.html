@@ -1,0 +1,18 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}Sair{% endblock %}
+{% block content %}
+  <section class="auth-card auth-confirm" aria-labelledby="logout-title">
+    <div class="auth-confirm-icon" aria-hidden="true">Q</div>
+    <div class="auth-card-head">
+      <p class="eyebrow">Encerrar sessão</p>
+      <h2 id="logout-title">Deseja sair?</h2>
+      <p>Seus favoritos e seu histórico continuarão salvos na sua conta.</p>
+    </div>
+    <form method="post" action="{% url 'account_logout' %}" class="auth-form">
+      {% csrf_token %}
+      {{ redirect_field }}
+      <button type="submit" class="auth-submit">Sim, sair <span aria-hidden="true">→</span></button>
+      <a href="{% url 'movies:home' %}" class="auth-secondary">Continuar no site</a>
+    </form>
+  </section>
+{% endblock %}

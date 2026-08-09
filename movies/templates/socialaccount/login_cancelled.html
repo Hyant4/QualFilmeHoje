@@ -1,0 +1,13 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}Login cancelado{% endblock %}
+{% block content %}
+  <section class="auth-card auth-confirm" aria-labelledby="login-cancelled-title">
+    <div class="auth-confirm-icon" aria-hidden="true">↩</div>
+    <div class="auth-card-head">
+      <p class="eyebrow">Tudo bem</p>
+      <h2 id="login-cancelled-title">Login cancelado</h2>
+      <p>Nenhuma conta foi conectada. Você pode tentar novamente ou entrar com e-mail e senha.</p>
+    </div>
+    <a href="{% url 'account_login' %}" class="auth-submit auth-submit-link">Voltar ao login <span aria-hidden="true">→</span></a>
+  </section>
+{% endblock %}

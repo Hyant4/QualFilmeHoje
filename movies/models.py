@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -41,6 +42,14 @@ class Title(models.Model):
 
 class Generation(models.Model):
     visitor_id = models.UUIDField("visitante", db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="title_generations",
+        verbose_name="usuário",
+        null=True,
+        blank=True,
+    )
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -61,6 +70,10 @@ class Generation(models.Model):
                 fields=("visitor_id", "-created_at"),
                 name="generation_visitor_date_idx",
             ),
+            models.Index(
+                fields=("user", "-created_at"),
+                name="generation_user_date_idx",
+            ),
         )
 
     def __str__(self):
@@ -69,6 +82,14 @@ class Generation(models.Model):
 
 class Favorite(models.Model):
     visitor_id = models.UUIDField("visitante", db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="title_favorites",
+        verbose_name="usuário",
+        null=True,
+        blank=True,
+    )
     title = models.ForeignKey(
         Title,
         on_delete=models.CASCADE,
@@ -86,11 +107,20 @@ class Favorite(models.Model):
                 fields=("visitor_id", "title"),
                 name="unique_favorite_per_visitor",
             ),
+            models.UniqueConstraint(
+                fields=("user", "title"),
+                condition=models.Q(user__isnull=False),
+                name="unique_favorite_per_user",
+            ),
         )
         indexes = (
             models.Index(
                 fields=("visitor_id", "-created_at"),
                 name="favorite_visitor_date_idx",
+            ),
+            models.Index(
+                fields=("user", "-created_at"),
+                name="favorite_user_date_idx",
             ),
         )
 

@@ -1,0 +1,27 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}Concluir cadastro{% endblock %}
+{% block content %}
+  <section class="auth-card" aria-labelledby="social-signup-title">
+    <div class="auth-card-head">
+      <p class="eyebrow">Só falta confirmar</p>
+      <h2 id="social-signup-title">Conclua seu cadastro</h2>
+      <p>Confira os dados recebidos do Google para criar sua conta no QualFilmeHoje.</p>
+    </div>
+    <form method="post" class="auth-form" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="form-errors" role="alert">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+      {% endif %}
+      {% for field in form %}
+        <div class="auth-field{% if field.errors %} has-error{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% for error in field.errors %}<small>{{ error }}</small>{% endfor %}
+        </div>
+      {% endfor %}
+      {{ redirect_field }}
+      <button type="submit" class="auth-submit">Concluir cadastro <span aria-hidden="true">→</span></button>
+      <a href="{% url 'account_login' %}" class="auth-secondary">Cancelar</a>
+    </form>
+  </section>
+{% endblock %}

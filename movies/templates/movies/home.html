@@ -33,10 +33,30 @@
         <a href="{% url 'movies:home' %}" class="brand-logo" aria-label="QualFilmeHoje — início">
           <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
         </a>
-        <a href="#gerador" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
+        <div class="nav-actions">
+          {% if user.is_authenticated %}
+            <span class="user-summary" title="{{ user.email|default:user.username }}">
+              <span class="user-avatar" aria-hidden="true">{{ user.email|default:user.username|first|upper }}</span>
+              <span class="user-copy"><small>Sessão ativa</small><strong>{{ user.email|default:user.username }}</strong></span>
+            </span>
+            <form method="post" action="{% url 'account_logout' %}" class="nav-logout-form">
+              {% csrf_token %}
+              <button type="submit" class="nav-account nav-logout">Sair</button>
+            </form>
+          {% else %}
+            <a href="{% url 'account_login' %}" class="nav-account">Entrar</a>
+          {% endif %}
+          <a href="#gerador" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
+        </div>
       </nav>
     </div>
   </header>
+
+  {% if messages %}
+    <div class="site-messages wrap" aria-live="polite">
+      {% for message in messages %}<p class="site-message {{ message.tags }}">{{ message }}</p>{% endfor %}
+    </div>
+  {% endif %}
 
   {% if error %}
     <div class="top-alert" data-error-alert>
@@ -293,7 +313,7 @@
         <div class="wrap">
           <div class="section-head library-head">
             <div><p class="eyebrow">Seu espaço</p><h2 id="library-title">Minha sessão</h2></div>
-            <span class="mono">Salvo neste navegador</span>
+            <span class="mono">{% if user.is_authenticated %}Salvo na sua conta{% else %}Salvo neste navegador{% endif %}</span>
           </div>
 
           <div class="library-columns">

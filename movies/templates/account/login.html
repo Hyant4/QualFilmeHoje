@@ -1,0 +1,45 @@
+{% extends "account/base_entrance.html" %}
+{% load socialaccount %}
+{% block head_title %}Entrar{% endblock %}
+{% block content %}
+  <section class="auth-card" aria-labelledby="login-title">
+    <div class="auth-card-head">
+      <p class="eyebrow">Bem-vindo de volta</p>
+      <h2 id="login-title">Entre na sua conta</h2>
+      <p>Ainda não tem uma conta? <a href="{% url 'account_signup' %}">Criar conta grátis</a></p>
+    </div>
+
+    {% if google_auth_configured %}
+      <form method="post" action="{% provider_login_url 'google' process='login' %}" class="google-login-form">
+        {% csrf_token %}
+        <button type="submit" class="google-button">
+          <span class="google-mark" aria-hidden="true">G</span>
+          Continuar com Google
+        </button>
+      </form>
+      <div class="auth-divider"><span>ou use seu e-mail</span></div>
+    {% endif %}
+
+    <form method="post" action="{% url 'account_login' %}" class="auth-form" novalidate>
+      {% csrf_token %}
+      {{ redirect_field }}
+      {% if form.non_field_errors %}
+        <div class="form-errors" role="alert">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+      {% endif %}
+
+      <div class="auth-field{% if form.login.errors %} has-error{% endif %}">
+        <label for="{{ form.login.id_for_label }}">E-mail</label>
+        {{ form.login }}
+        {% for error in form.login.errors %}<small>{{ error }}</small>{% endfor %}
+      </div>
+      <div class="auth-field{% if form.password.errors %} has-error{% endif %}">
+        <label for="{{ form.password.id_for_label }}">Senha</label>
+        {{ form.password }}
+        {% for error in form.password.errors %}<small>{{ error }}</small>{% endfor %}
+      </div>
+
+      <button type="submit" class="auth-submit">Entrar <span aria-hidden="true">→</span></button>
+    </form>
+    <p class="auth-footnote">Seus sorteios feitos neste navegador serão ligados à conta após o login.</p>
+  </section>
+{% endblock %}

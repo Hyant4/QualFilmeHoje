@@ -81,7 +81,7 @@ def home(request):
         "selected_media_type": "movie",
         "selected_min_rating": DEFAULT_MIN_RATING,
     }
-    context.update(get_library(_visitor_id(request)))
+    context.update(get_library(_visitor_id(request), user=request.user))
     return render(request, "movies/home.html", context)
 
 
@@ -106,16 +106,21 @@ def generate_movie(request):
             genre_id or None,
             _genre_name(genre_sets, media_type, genre_id),
             min_rating,
+            user=request.user,
         )
         movie["can_favorite"] = saved_title is not None
-        movie["is_favorite"] = is_favorite(visitor_id, saved_title)
+        movie["is_favorite"] = is_favorite(
+            visitor_id,
+            saved_title,
+            user=request.user,
+        )
         context["movie"] = movie
     except TMDBError as exc:
         context["error"] = str(exc)
 
     if genres_error and "error" not in context:
         context["error"] = genres_error
-    context.update(get_library(_visitor_id(request)))
+    context.update(get_library(_visitor_id(request), user=request.user))
     return render(request, "movies/home.html", context)
 
 
@@ -128,10 +133,15 @@ def toggle_title_favorite(request):
 
     visitor_id = _visitor_id(request, create=True)
     title = get_object_or_404(Title, media_type=media_type, tmdb_id=int(tmdb_id))
-    if not Generation.objects.filter(visitor_id=visitor_id, title=title).exists():
+    generation_lookup = (
+        {"user": request.user, "title": title}
+        if request.user.is_authenticated
+        else {"visitor_id": visitor_id, "user__isnull": True, "title": title}
+    )
+    if not Generation.objects.filter(**generation_lookup).exists():
         return JsonResponse({"error": "Este título não pertence ao seu histórico."}, status=404)
 
-    favorited = toggle_favorite(visitor_id, title)
+    favorited = toggle_favorite(visitor_id, title, user=request.user)
     return JsonResponse(
         {
             "favorited": favorited,

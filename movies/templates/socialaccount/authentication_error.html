@@ -1,0 +1,13 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}Falha no login{% endblock %}
+{% block content %}
+  <section class="auth-card auth-confirm" aria-labelledby="auth-error-title">
+    <div class="auth-confirm-icon auth-error-icon" aria-hidden="true">!</div>
+    <div class="auth-card-head">
+      <p class="eyebrow">Login não concluído</p>
+      <h2 id="auth-error-title">Não foi possível entrar</h2>
+      <p>O Google não concluiu a autenticação. Tente novamente ou use seu e-mail e senha.</p>
+    </div>
+    <a href="{% url 'account_login' %}" class="auth-submit auth-submit-link">Voltar ao login <span aria-hidden="true">→</span></a>
+  </section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "account/base_entrance.html" %}
+{% block head_title %}Continuar com Google{% endblock %}
+{% block content %}
+  <section class="auth-card auth-confirm" aria-labelledby="social-login-title">
+    <div class="auth-confirm-icon google-confirm" aria-hidden="true">G</div>
+    <div class="auth-card-head">
+      <p class="eyebrow">Login seguro</p>
+      <h2 id="social-login-title">Continuar com Google</h2>
+      <p>Você será direcionado ao Google para escolher sua conta. O QualFilmeHoje não recebe sua senha.</p>
+    </div>
+    <form method="post" class="auth-form">
+      {% csrf_token %}
+      <button type="submit" class="auth-submit">Ir para o Google <span aria-hidden="true">→</span></button>
+      <a href="{% url 'account_login' %}" class="auth-secondary">Cancelar</a>
+    </form>
+  </section>
+{% endblock %}

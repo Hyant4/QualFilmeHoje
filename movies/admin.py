@@ -12,14 +12,14 @@ class TitleAdmin(admin.ModelAdmin):
 
 @admin.register(Generation)
 class GenerationAdmin(admin.ModelAdmin):
-    list_display = ("title", "genre_name", "min_rating", "created_at")
+    list_display = ("title", "user", "genre_name", "min_rating", "created_at")
     list_filter = ("title__media_type", "created_at")
-    search_fields = ("title__name", "visitor_id")
+    search_fields = ("title__name", "visitor_id", "user__email")
     date_hierarchy = "created_at"
 
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ("title", "created_at")
+    list_display = ("title", "user", "created_at")
     list_filter = ("title__media_type", "created_at")
-    search_fields = ("title__name", "visitor_id")
+    search_fields = ("title__name", "visitor_id", "user__email")
