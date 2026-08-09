@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -6,11 +6,13 @@ from django.test import SimpleTestCase
 
 from movies.services.tmdb import (
     TMDBError,
+    get_now_playing_movies,
     get_random_movie,
     get_random_title,
     get_recent_top_movies,
     get_recent_top_series,
     get_title_details,
+    get_upcoming_movies,
 )
 
 
@@ -76,6 +78,76 @@ class TMDBServiceTests(SimpleTestCase):
         oldest = date.fromisoformat(discover_call.kwargs["first_air_date.gte"])
         newest = date.fromisoformat(discover_call.kwargs["first_air_date.lte"])
         self.assertEqual((newest - oldest).days, 30)
+
+    @patch("movies.services.tmdb._get")
+    def test_now_playing_movies_are_localised_for_brazil(self, mock_get):
+        mock_get.return_value = {
+            "results": [
+                {
+                    "id": index,
+                    "title": f"Filme no cinema {index}",
+                    "release_date": "2026-08-01",
+                    "vote_average": 8.4,
+                    "vote_count": 200,
+                    "poster_path": f"/cinema-{index}.jpg",
+                }
+                for index in range(1, 13)
+            ]
+        }
+
+        movies = get_now_playing_movies()
+
+        self.assertEqual(len(movies), 10)
+        self.assertEqual(movies[0]["media_type"], "movie")
+        self.assertEqual(movies[0]["availability_kind"], "cinema")
+        self.assertEqual(movies[0]["availability_label"], "Onde assistir · Nos cinemas")
+        mock_get.assert_called_once_with(
+            "/movie/now_playing",
+            language="pt-BR",
+            region="BR",
+            page=1,
+        )
+
+    @patch("movies.services.tmdb._get")
+    def test_upcoming_movies_only_include_future_releases_in_date_order(self, mock_get):
+        today = date.today()
+        near_release = today + timedelta(days=4)
+        later_release = today + timedelta(days=18)
+        mock_get.return_value = {
+            "results": [
+                {
+                    "id": 1,
+                    "title": "Já lançado",
+                    "release_date": (today - timedelta(days=1)).isoformat(),
+                },
+                {
+                    "id": 2,
+                    "title": "Estreia distante",
+                    "release_date": later_release.isoformat(),
+                },
+                {
+                    "id": 3,
+                    "title": "Próxima estreia",
+                    "release_date": near_release.isoformat(),
+                },
+                {"id": 4, "title": "Sem data", "release_date": ""},
+            ]
+        }
+
+        movies = get_upcoming_movies()
+
+        self.assertEqual([movie["id"] for movie in movies], [3, 2])
+        self.assertEqual(movies[0]["availability_kind"], "upcoming")
+        self.assertEqual(
+            movies[0]["availability_label"],
+            f"Estreia em {near_release.strftime('%d/%m/%Y')}",
+        )
+        mock_get.assert_called_once_with(
+            "/movie/upcoming",
+            language="pt-BR",
+            region="BR",
+            page=1,
+        )
 
     @patch("movies.services.tmdb.get_streaming_groups", return_value=[])
     @patch("movies.services.tmdb._fetch_title_extras")

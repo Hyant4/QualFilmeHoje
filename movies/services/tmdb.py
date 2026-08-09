@@ -24,6 +24,7 @@ BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/w1280"
 DISCOVERY_CACHE_SECONDS = 10 * 60
 TITLE_CACHE_SECONDS = 12 * 60 * 60
 TRENDS_CACHE_SECONDS = 30 * 60
+RELEASE_LISTS_CACHE_SECONDS = 30 * 60
 RECENT_RELEASE_DAYS = 30
 TRENDS_MIN_VOTES = 20
 MAX_STREAMING_CANDIDATES = 2
@@ -355,6 +356,106 @@ def get_recent_top_movies(limit=10):
 
 def get_recent_top_series(limit=10):
     return _get_recent_top_titles("tv", limit)
+
+
+def _normalise_release_list_item(item, availability_kind):
+    title = item.get("title")
+    if not item.get("id") or not title:
+        return None
+
+    release_date = item.get("release_date") or ""
+    try:
+        parsed_release_date = date.fromisoformat(release_date)
+    except (TypeError, ValueError):
+        parsed_release_date = None
+
+    if availability_kind == "cinema":
+        availability_label = "Onde assistir · Nos cinemas"
+    else:
+        availability_label = (
+            f"Estreia em {parsed_release_date.strftime('%d/%m/%Y')}"
+            if parsed_release_date
+            else "Estreia em breve"
+        )
+
+    return {
+        "id": item["id"],
+        "media_type": "movie",
+        "title": title,
+        "original_title": item.get("original_title") or "",
+        "overview": item.get("overview") or "",
+        "release_date": release_date,
+        "release_date_value": parsed_release_date,
+        "vote_average": _normalise_rating(item.get("vote_average")),
+        "vote_count": item.get("vote_count") or 0,
+        "poster_url": (
+            f"{POSTER_BASE_URL}{item['poster_path']}"
+            if item.get("poster_path")
+            else ""
+        ),
+        "availability_kind": availability_kind,
+        "availability_label": availability_label,
+    }
+
+
+def _get_movie_release_list(list_name, limit=10):
+    """Retorna filmes em cartaz ou próximos lançamentos para o Brasil."""
+
+    if list_name not in {"now_playing", "upcoming"}:
+        raise TMDBError("Lista de lançamentos inválida.")
+
+    limit = min(max(int(limit), 1), 20)
+    today = date.today()
+    cache_key = f"tmdb:movie-releases:v1:{list_name}:BR:{today.isoformat()}:{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    data = _get(
+        f"/movie/{list_name}",
+        language="pt-BR",
+        region="BR",
+        page=1,
+    )
+    availability_kind = "cinema" if list_name == "now_playing" else "upcoming"
+    titles = []
+    seen_ids = set()
+    for item in data.get("results", []):
+        normalised = _normalise_release_list_item(item, availability_kind)
+        if not normalised or normalised["id"] in seen_ids:
+            continue
+        if (
+            list_name == "upcoming"
+            and (
+                normalised["release_date_value"] is None
+                or normalised["release_date_value"] <= today
+            )
+        ):
+            continue
+        seen_ids.add(normalised["id"])
+        titles.append(normalised)
+
+    if list_name == "upcoming":
+        titles.sort(
+            key=lambda item: (
+                item["release_date_value"],
+                -(item["vote_count"] or 0),
+            )
+        )
+
+    for title in titles:
+        title.pop("release_date_value", None)
+    titles = titles[:limit]
+    cache.set(cache_key, titles, RELEASE_LISTS_CACHE_SECONDS)
+    return titles
+
+
+def get_now_playing_movies(limit=10):
+    return _get_movie_release_list("now_playing", limit)
+
+
+def get_upcoming_movies(limit=10):
+    return _get_movie_release_list("upcoming", limit)
 
 
 def _discovery_cache_key(media_type, genre_id, min_rating, max_rating):

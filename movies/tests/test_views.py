@@ -10,6 +10,31 @@ from movies.services.tmdb import TMDBError
 
 class MovieViewTests(TestCase):
     @patch(
+        "movies.views.get_upcoming_movies",
+        return_value=[
+            {
+                "id": 66,
+                "media_type": "movie",
+                "title": "Filme futuro",
+                "release_date": "2026-09-20",
+                "availability_label": "Estreia em 20/09/2026",
+            }
+        ],
+    )
+    @patch(
+        "movies.views.get_now_playing_movies",
+        return_value=[
+            {
+                "id": 55,
+                "media_type": "movie",
+                "title": "Filme no cinema",
+                "release_date": "2026-08-01",
+                "vote_average": 8.1,
+                "availability_label": "Onde assistir · Nos cinemas",
+            }
+        ],
+    )
+    @patch(
         "movies.views.get_recent_top_series",
         return_value=[
             {
@@ -35,7 +60,12 @@ class MovieViewTests(TestCase):
     )
     @patch("movies.views.get_genres", return_value=[{"id": 18, "name": "Drama"}])
     def test_home_renders_generator_rating_slider_and_trends(
-        self, _mock_genres, _mock_movie_trends, _mock_series_trends
+        self,
+        _mock_genres,
+        _mock_movie_trends,
+        _mock_series_trends,
+        _mock_now_playing,
+        _mock_upcoming,
     ):
         response = self.client.get(reverse("movies:home"))
 
@@ -64,6 +94,20 @@ class MovieViewTests(TestCase):
         self.assertContains(
             response,
             reverse("movies:title_detail", args=("tv", 77)),
+        )
+        self.assertContains(response, "Nos cinemas")
+        self.assertContains(response, "Filme no cinema")
+        self.assertContains(response, "Onde assistir · Nos cinemas")
+        self.assertContains(
+            response,
+            reverse("movies:title_detail", args=("movie", 55)),
+        )
+        self.assertContains(response, "Em breve")
+        self.assertContains(response, "Filme futuro")
+        self.assertContains(response, "Estreia em 20/09/2026")
+        self.assertContains(
+            response,
+            reverse("movies:title_detail", args=("movie", 66)),
         )
 
     @patch("movies.views.get_random_title")

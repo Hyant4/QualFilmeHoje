@@ -16,10 +16,12 @@ from .services.library import (
 from .services.tmdb import (
     TMDBError,
     get_genres,
+    get_now_playing_movies,
     get_random_title,
     get_recent_top_movies,
     get_recent_top_series,
     get_title_details,
+    get_upcoming_movies,
 )
 
 DEFAULT_MIN_RATING = 6.0
@@ -37,32 +39,37 @@ def _safe_genres():
     return genre_sets, errors[0] if errors else None
 
 
-def _safe_trends():
-    results = {"movie": [], "tv": []}
-    errors = {"movie": None, "tv": None}
-    getters = {"movie": get_recent_top_movies, "tv": get_recent_top_series}
-    with ThreadPoolExecutor(max_workers=2) as executor:
+def _safe_home_rows():
+    getters = {
+        "movie": get_recent_top_movies,
+        "tv": get_recent_top_series,
+        "now_playing": get_now_playing_movies,
+        "upcoming": get_upcoming_movies,
+    }
+    results = {key: [] for key in getters}
+    errors = {key: None for key in getters}
+    with ThreadPoolExecutor(max_workers=len(getters)) as executor:
         futures = {
-            media_type: executor.submit(getter)
-            for media_type, getter in getters.items()
+            row_name: executor.submit(getter)
+            for row_name, getter in getters.items()
         }
-        for media_type, future in futures.items():
+        for row_name, future in futures.items():
             try:
-                results[media_type] = future.result()
+                results[row_name] = future.result()
             except TMDBError as exc:
-                errors[media_type] = str(exc)
+                errors[row_name] = str(exc)
     return results, errors
 
 
 def _safe_landing_data():
-    """Carrega filtros e tendências em paralelo para não atrasar a landing page."""
+    """Carrega filtros e carrosséis em paralelo para não atrasar a landing page."""
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         genres_future = executor.submit(_safe_genres)
-        trends_future = executor.submit(_safe_trends)
+        rows_future = executor.submit(_safe_home_rows)
         genre_sets, genres_error = genres_future.result()
-        trends, trends_errors = trends_future.result()
-    return genre_sets, genres_error, trends, trends_errors
+        rows, row_errors = rows_future.result()
+    return genre_sets, genres_error, rows, row_errors
 
 
 def _parse_filters(request):
@@ -116,7 +123,7 @@ def _genre_name(genre_sets, media_type, genre_id):
 
 
 def home(request):
-    genre_sets, error, trends, trends_errors = _safe_landing_data()
+    genre_sets, error, rows, row_errors = _safe_landing_data()
     context = {
         "movie_genres": genre_sets["movie"],
         "tv_genres": genre_sets["tv"],
@@ -124,10 +131,14 @@ def home(request):
         "selected_media_type": "movie",
         "selected_min_rating": DEFAULT_MIN_RATING,
         "selected_max_rating": DEFAULT_MAX_RATING,
-        "trending_movies": trends["movie"],
-        "trending_series": trends["tv"],
-        "trends_error": trends_errors["movie"],
-        "series_trends_error": trends_errors["tv"],
+        "trending_movies": rows["movie"],
+        "trending_series": rows["tv"],
+        "now_playing_movies": rows["now_playing"],
+        "upcoming_movies": rows["upcoming"],
+        "trends_error": row_errors["movie"],
+        "series_trends_error": row_errors["tv"],
+        "now_playing_error": row_errors["now_playing"],
+        "upcoming_error": row_errors["upcoming"],
     }
     context.update(get_library(_visitor_id(request), user=request.user))
     return render(request, "movies/home.html", context)
@@ -171,11 +182,15 @@ def generate_movie(request):
 
     if genres_error and "error" not in context:
         context["error"] = genres_error
-    trends, trends_errors = _safe_trends()
-    context["trending_movies"] = trends["movie"]
-    context["trending_series"] = trends["tv"]
-    context["trends_error"] = trends_errors["movie"]
-    context["series_trends_error"] = trends_errors["tv"]
+    rows, row_errors = _safe_home_rows()
+    context["trending_movies"] = rows["movie"]
+    context["trending_series"] = rows["tv"]
+    context["now_playing_movies"] = rows["now_playing"]
+    context["upcoming_movies"] = rows["upcoming"]
+    context["trends_error"] = row_errors["movie"]
+    context["series_trends_error"] = row_errors["tv"]
+    context["now_playing_error"] = row_errors["now_playing"]
+    context["upcoming_error"] = row_errors["upcoming"]
     context.update(get_library(_visitor_id(request), user=request.user))
     return render(request, "movies/home.html", context)
 

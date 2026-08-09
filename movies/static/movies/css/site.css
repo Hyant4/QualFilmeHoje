@@ -139,6 +139,15 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
 .trends-empty { margin-top: 24px; padding: 34px; border: 1px dashed var(--line); color: var(--muted); text-align: center; }
 .trends-empty span { color: var(--gold); font-size: 0.7rem; }
 .trends-empty p { margin: 8px 0 0; }
+.releases-section--cinema { background: radial-gradient(circle at 12% 18%, rgba(232, 185, 76, 0.08), transparent 34%), var(--bg); }
+.releases-section--upcoming { background: radial-gradient(circle at 86% 18%, rgba(92, 27, 34, 0.2), transparent 38%), var(--bg); }
+.release-status { position: absolute; top: 12px; left: 12px; z-index: 3; padding: 7px 9px; border: 1px solid var(--gold); font-size: 0.58rem; font-weight: 600; letter-spacing: 0.06em; line-height: 1; text-transform: uppercase; box-shadow: 6px 6px 0 rgba(14, 10, 10, 0.68); }
+.release-status--cinema { background: var(--gold); color: #241905; }
+.release-status--upcoming { background: rgba(14, 10, 10, 0.9); color: var(--gold); }
+.trend-copy .trend-availability { display: flex; align-items: center; gap: 7px; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); color: var(--gold-soft); font-family: "Work Sans", sans-serif; font-size: 0.68rem; font-weight: 600; line-height: 1.35; }
+.trend-copy .trend-availability > span { flex: 0 0 auto; color: var(--gold); font-size: 0.48rem; }
+.trend-copy .trend-availability--upcoming { color: var(--muted); }
+.release-card .trend-copy { min-height: 112px; }
 
 .detail-navigation { padding-top: 28px; }
 .detail-page .result-section { padding-top: 24px; }

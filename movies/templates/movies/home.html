@@ -287,6 +287,105 @@
           {% endif %}
         </div>
       </section>
+
+      <section class="trends-section releases-section releases-section--cinema" aria-labelledby="now-playing-title" data-trends>
+        <div class="wrap">
+          <div class="section-head trends-head">
+            <div>
+              <p class="eyebrow">Em cartaz no Brasil</p>
+              <h2 id="now-playing-title">Nos cinemas</h2>
+              <p class="trends-description">Filmes atualmente em exibição. A disponibilidade está identificada em cada título.</p>
+            </div>
+            {% if now_playing_movies|length > 1 %}
+              <div class="trends-controls" aria-label="Controles dos filmes nos cinemas">
+                <button type="button" aria-label="Ver filmes anteriores em cartaz" data-trends-prev>←</button>
+                <button type="button" aria-label="Ver próximos filmes em cartaz" data-trends-next>→</button>
+              </div>
+            {% endif %}
+          </div>
+
+          {% if now_playing_movies %}
+            <div class="trends-viewport" tabindex="0" aria-label="Filmes em cartaz no Brasil. Use as setas para navegar." data-trends-viewport>
+              <div class="trends-track">
+                {% for release in now_playing_movies %}
+                  <a class="trend-card release-card" href="{% url 'movies:title_detail' release.media_type release.id %}" data-trend-card aria-label="Abrir informações de {{ release.title }}, atualmente nos cinemas">
+                    <div class="trend-poster">
+                      <span class="release-status release-status--cinema mono">Nos cinemas</span>
+                      {% if release.poster_url %}
+                        <img src="{{ release.poster_url }}" alt="Pôster de {{ release.title }}" loading="lazy" width="500" height="750">
+                      {% else %}
+                        <div class="trend-placeholder marquee" aria-hidden="true">Q</div>
+                      {% endif %}
+                      <span class="trend-open" aria-hidden="true">Ver ficha →</span>
+                    </div>
+                    <div class="trend-copy">
+                      <span class="mono">Filme{% if release.release_date %} · {{ release.release_date|slice:':4' }}{% endif %}</span>
+                      <h3>{{ release.title }}</h3>
+                      {% if release.vote_average %}<p class="trend-score"><i aria-hidden="true">★</i> {{ release.vote_average|floatformat:1 }} <small>/10</small></p>{% endif %}
+                      <p class="trend-availability trend-availability--cinema"><span aria-hidden="true">●</span> {{ release.availability_label }}</p>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+          {% else %}
+            <div class="trends-empty">
+              <span class="mono">PROGRAMAÇÃO INDISPONÍVEL</span>
+              <p>{{ now_playing_error|default:'Não foi possível carregar os filmes em cartaz neste momento.' }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="trends-section releases-section releases-section--upcoming" aria-labelledby="upcoming-title" data-trends>
+        <div class="wrap">
+          <div class="section-head trends-head">
+            <div>
+              <p class="eyebrow">Próximas estreias</p>
+              <h2 id="upcoming-title">Em breve</h2>
+              <p class="trends-description">Filmes com lançamento previsto no Brasil e data de estreia posterior a hoje.</p>
+            </div>
+            {% if upcoming_movies|length > 1 %}
+              <div class="trends-controls" aria-label="Controles dos próximos lançamentos">
+                <button type="button" aria-label="Ver estreias anteriores" data-trends-prev>←</button>
+                <button type="button" aria-label="Ver próximas estreias" data-trends-next>→</button>
+              </div>
+            {% endif %}
+          </div>
+
+          {% if upcoming_movies %}
+            <div class="trends-viewport" tabindex="0" aria-label="Próximos lançamentos no Brasil. Use as setas para navegar." data-trends-viewport>
+              <div class="trends-track">
+                {% for release in upcoming_movies %}
+                  <a class="trend-card release-card" href="{% url 'movies:title_detail' release.media_type release.id %}" data-trend-card aria-label="Abrir informações de {{ release.title }}, lançamento em breve">
+                    <div class="trend-poster">
+                      <span class="release-status release-status--upcoming mono">Em breve</span>
+                      {% if release.poster_url %}
+                        <img src="{{ release.poster_url }}" alt="Pôster de {{ release.title }}" loading="lazy" width="500" height="750">
+                      {% else %}
+                        <div class="trend-placeholder marquee" aria-hidden="true">Q</div>
+                      {% endif %}
+                      <span class="trend-open" aria-hidden="true">Ver ficha →</span>
+                    </div>
+                    <div class="trend-copy">
+                      <span class="mono">Filme{% if release.release_date %} · {{ release.release_date|slice:':4' }}{% endif %}</span>
+                      <h3>{{ release.title }}</h3>
+                      <p class="trend-availability trend-availability--upcoming"><span aria-hidden="true">◆</span> {{ release.availability_label }}</p>
+                    </div>
+                  </a>
+                {% endfor %}
+              </div>
+            </div>
+            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+          {% else %}
+            <div class="trends-empty">
+              <span class="mono">ESTREIAS INDISPONÍVEIS</span>
+              <p>{{ upcoming_error|default:'Não foi possível carregar os próximos lançamentos neste momento.' }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
     {% endif %}
 
     {% if is_detail_page and not movie %}
