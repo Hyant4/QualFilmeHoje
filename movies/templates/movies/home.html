@@ -159,6 +159,26 @@
             </div>
           </div>
 
+          <div class="field score-field">
+            <div class="score-label">
+              <label for="max_rating">Nota máxima no TMDB</label>
+              <output for="max_rating" id="maxRatingOutput">{{ selected_max_rating|default:10|floatformat:1 }}</output>
+            </div>
+            <input
+              type="range"
+              id="max_rating"
+              name="max_rating"
+              min="0"
+              max="10"
+              step="0.1"
+              value="{{ selected_max_rating|default:10|stringformat:'s' }}"
+              aria-describedby="maxRatingScale"
+            >
+            <div class="range-scale mono" id="maxRatingScale" aria-hidden="true">
+              <span>0</span><span>5</span><span>10</span>
+            </div>
+          </div>
+
           <button class="generate-button" type="submit" data-generate-button>
             <span class="button-label">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></span>
             <span aria-hidden="true">→</span>

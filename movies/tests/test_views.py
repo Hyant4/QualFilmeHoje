@@ -43,6 +43,7 @@ class MovieViewTests(TestCase):
         self.assertContains(response, 'data-media-option="movie"')
         self.assertContains(response, 'type="range"')
         self.assertContains(response, 'step="0.1"')
+        self.assertContains(response, "Nota máxima no TMDB")
         self.assertContains(response, "Séries")
         self.assertContains(response, "Nota mínima no TMDB")
         self.assertContains(response, "hero-pov.webp")
@@ -99,11 +100,16 @@ class MovieViewTests(TestCase):
 
         response = self.client.post(
             reverse("movies:generate_movie"),
-            {"media_type": "movie", "genre_id": "18", "min_rating": "7.5"},
+            {
+                "media_type": "movie",
+                "genre_id": "18",
+                "min_rating": "7.5",
+                "max_rating": "9.0",
+            },
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_random.assert_called_once_with("movie", "18", 7.5)
+        mock_random.assert_called_once_with("movie", "18", 7.5, 9.0)
         self.assertContains(response, "Filme teste")
         self.assertContains(response, "Trailer")
         self.assertContains(response, "Reviews")
@@ -139,7 +145,7 @@ class MovieViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_random.assert_called_once_with("movie", None, 6.0)
+        mock_random.assert_called_once_with("movie", None, 6.0, 10.0)
 
     @patch("movies.views.get_random_title")
     @patch("movies.views.get_genres", return_value=[])
@@ -154,13 +160,36 @@ class MovieViewTests(TestCase):
 
         response = self.client.post(
             reverse("movies:generate_movie"),
-            {"media_type": "tv", "genre_id": "10765", "min_rating": "6.1"},
+            {
+                "media_type": "tv",
+                "genre_id": "10765",
+                "min_rating": "6.1",
+                "max_rating": "8.7",
+            },
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_random.assert_called_once_with("tv", "10765", 6.1)
+        mock_random.assert_called_once_with("tv", "10765", 6.1, 8.7)
         self.assertContains(response, 'value="tv" data-media-input')
         self.assertContains(response, "Série teste")
+
+    @patch("movies.views.get_random_title")
+    @patch("movies.views.get_genres", return_value=[])
+    def test_maximum_rating_never_stays_below_minimum(
+        self, _mock_genres, mock_random
+    ):
+        mock_random.return_value = {
+            "title": "Filme",
+            "reviews": [],
+            "provider_groups": [],
+        }
+
+        self.client.post(
+            reverse("movies:generate_movie"),
+            {"min_rating": "8.4", "max_rating": "6.0"},
+        )
+
+        mock_random.assert_called_once_with("movie", None, 8.4, 8.4)
 
     def test_favorite_can_be_added_and_removed_only_from_visitor_history(self):
         visitor_id = uuid.uuid4()

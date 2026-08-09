@@ -161,10 +161,13 @@ class TMDBServiceTests(SimpleTestCase):
             raise AssertionError(f"Chamada inesperada: {path} {params}")
 
         mock_get.side_effect = response
-        movie = get_random_movie(genre_id="18", min_rating="7.5")
+        movie = get_random_movie(
+            genre_id="18", min_rating="7.5", max_rating="8.4"
+        )
 
         discover_call = next(call for call in mock_get.call_args_list if call.args[0] == "/discover/movie")
         self.assertEqual(discover_call.kwargs["vote_average.gte"], 7.5)
+        self.assertEqual(discover_call.kwargs["vote_average.lte"], 8.4)
         self.assertEqual(discover_call.kwargs["with_genres"], "18")
         details_call = next(call for call in mock_get.call_args_list if call.args[0] == "/movie/42")
         self.assertEqual(
@@ -234,6 +237,7 @@ class TMDBServiceTests(SimpleTestCase):
 
         discover_call = mock_get.call_args_list[0]
         self.assertEqual(discover_call.kwargs["vote_average.gte"], 10.0)
+        self.assertEqual(discover_call.kwargs["vote_average.lte"], 10.0)
 
     @patch("movies.services.tmdb.random.sample")
     @patch("movies.services.tmdb.get_streaming_groups")
@@ -291,8 +295,8 @@ class TMDBServiceTests(SimpleTestCase):
 
         from movies.services.tmdb import _load_discovery_page
 
-        _load_discovery_page("movie", None, 7.0, filters)
-        _load_discovery_page("movie", None, 7.0, filters)
+        _load_discovery_page("movie", None, 7.0, 10.0, filters)
+        _load_discovery_page("movie", None, 7.0, 10.0, filters)
 
         first_page_calls = [
             call

@@ -23,6 +23,7 @@ from .services.tmdb import (
 )
 
 DEFAULT_MIN_RATING = 6.0
+DEFAULT_MAX_RATING = 10.0
 
 
 def _safe_genres():
@@ -77,8 +78,13 @@ def _parse_filters(request):
         min_rating = float(request.POST.get("min_rating", DEFAULT_MIN_RATING))
     except (TypeError, ValueError):
         min_rating = DEFAULT_MIN_RATING
+    try:
+        max_rating = float(request.POST.get("max_rating", DEFAULT_MAX_RATING))
+    except (TypeError, ValueError):
+        max_rating = DEFAULT_MAX_RATING
     min_rating = min(max(min_rating, 0.0), 10.0)
-    return media_type, genre_id, min_rating
+    max_rating = min(max(max_rating, min_rating), 10.0)
+    return media_type, genre_id, min_rating, max_rating
 
 
 def _visitor_id(request, *, create=False):
@@ -117,6 +123,7 @@ def home(request):
         "error": error,
         "selected_media_type": "movie",
         "selected_min_rating": DEFAULT_MIN_RATING,
+        "selected_max_rating": DEFAULT_MAX_RATING,
         "trending_movies": trends["movie"],
         "trending_series": trends["tv"],
         "trends_error": trends_errors["movie"],
@@ -128,7 +135,7 @@ def home(request):
 
 @require_POST
 def generate_movie(request):
-    media_type, genre_id, min_rating = _parse_filters(request)
+    media_type, genre_id, min_rating, max_rating = _parse_filters(request)
     genre_sets, genres_error = _safe_genres()
     context = {
         "movie_genres": genre_sets["movie"],
@@ -136,10 +143,13 @@ def generate_movie(request):
         "selected_media_type": media_type,
         "selected_genre": genre_id,
         "selected_min_rating": min_rating,
+        "selected_max_rating": max_rating,
     }
 
     try:
-        movie = get_random_title(media_type, genre_id or None, min_rating)
+        movie = get_random_title(
+            media_type, genre_id or None, min_rating, max_rating
+        )
         visitor_id = _visitor_id(request, create=True)
         saved_title = record_generation(
             visitor_id,

@@ -1,5 +1,7 @@
 const ratingInput = document.querySelector("#min_rating");
 const ratingOutput = document.querySelector("#ratingOutput");
+const maxRatingInput = document.querySelector("#max_rating");
+const maxRatingOutput = document.querySelector("#maxRatingOutput");
 const mediaInput = document.querySelector("[data-media-input]");
 const mediaButtons = [...document.querySelectorAll("[data-media-option]")];
 const genreFields = [...document.querySelectorAll("[data-genre-field]")];
@@ -40,19 +42,32 @@ mediaButtons.forEach((button, index) => {
 
 selectMedia(mediaInput?.value || "movie");
 
-function updateRating() {
-  if (!ratingInput || !ratingOutput) return;
-  const value = Number(ratingInput.value);
-  const min = Number(ratingInput.min);
-  const max = Number(ratingInput.max);
+function updateRatingDisplay(input, output, suffix = "") {
+  if (!input || !output) return;
+  const value = Number(input.value);
+  const min = Number(input.min);
+  const max = Number(input.max);
   const progress = ((value - min) / (max - min)) * 100;
-  ratingOutput.value = `${value.toFixed(1)}+`;
-  ratingOutput.textContent = `${value.toFixed(1)}+`;
-  ratingInput.style.setProperty("--range-progress", `${progress}%`);
+  output.value = `${value.toFixed(1)}${suffix}`;
+  output.textContent = `${value.toFixed(1)}${suffix}`;
+  input.style.setProperty("--range-progress", `${progress}%`);
 }
 
-ratingInput?.addEventListener("input", updateRating);
-updateRating();
+function updateRatingRange(changedInput) {
+  if (!ratingInput || !maxRatingInput) return;
+  if (changedInput === ratingInput && Number(ratingInput.value) > Number(maxRatingInput.value)) {
+    maxRatingInput.value = ratingInput.value;
+  }
+  if (changedInput === maxRatingInput && Number(maxRatingInput.value) < Number(ratingInput.value)) {
+    ratingInput.value = maxRatingInput.value;
+  }
+  updateRatingDisplay(ratingInput, ratingOutput, "+");
+  updateRatingDisplay(maxRatingInput, maxRatingOutput);
+}
+
+ratingInput?.addEventListener("input", () => updateRatingRange(ratingInput));
+maxRatingInput?.addEventListener("input", () => updateRatingRange(maxRatingInput));
+updateRatingRange();
 
 document.querySelector("[data-alert-close]")?.addEventListener("click", (event) => {
   event.currentTarget.closest("[data-error-alert]")?.remove();
