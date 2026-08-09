@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
   <script src="{% static 'movies/js/site.js' %}" defer></script>
 </head>
-<body>
+<body{% if error %} class="has-top-alert"{% endif %}>
   <header class="site-header">
     <div class="wrap">
       <nav class="nav" aria-label="Navegação principal">
@@ -38,13 +38,26 @@
     </div>
   </header>
 
+  {% if error %}
+    <div class="top-alert" data-error-alert>
+      <div class="alert" role="alert">
+        <span class="alert-icon" aria-hidden="true">!</span>
+        <div class="alert-copy">
+          <strong class="mono">Sorteio não concluído</strong>
+          <p>{{ error }}</p>
+        </div>
+        <button class="alert-close" type="button" aria-label="Fechar aviso" data-alert-close>×</button>
+      </div>
+    </div>
+  {% endif %}
+
   <main>
     <section class="hero" id="gerador">
       <div class="wrap">
         <div class="hero-grid">
           <div class="hero-intro">
             <p class="eyebrow">Sessão de hoje · Brasil</p>
-            <h1>Qual <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span><br><em>hoje?</em></h1>
+            <h1><span class="hero-title-main">Qual <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></span><em>hoje?</em></h1>
             <div class="hero-copy">
               <p>Sem rolar catálogo por meia hora. Escolha um gênero e a nota mínima — a gente encontra a sua próxima sessão.</p>
               <p class="hero-note"><span></span> Filmes e séries disponíveis para assistir no Brasil</p>
@@ -122,12 +135,6 @@
           </button>
         </form>
 
-        {% if error %}
-          <div class="alert" role="alert">
-            <span class="mono">ERRO</span>
-            <p>{{ error }}</p>
-          </div>
-        {% endif %}
       </div>
     </section>
 

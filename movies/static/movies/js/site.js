@@ -54,6 +54,11 @@ function updateRating() {
 ratingInput?.addEventListener("input", updateRating);
 updateRating();
 
+document.querySelector("[data-alert-close]")?.addEventListener("click", (event) => {
+  event.currentTarget.closest("[data-error-alert]")?.remove();
+  document.body.classList.remove("has-top-alert");
+});
+
 const generatorForm = document.querySelector("[data-generator-form]");
 generatorForm?.addEventListener("submit", () => {
   const button = generatorForm.querySelector("[data-generate-button]");

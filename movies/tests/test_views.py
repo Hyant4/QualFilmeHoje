@@ -24,6 +24,7 @@ class MovieViewTests(TestCase):
         self.assertContains(response, "Escolhendo sua sessão")
         self.assertContains(response, "tv-screen-glow")
         self.assertContains(response, "ualFilmeHoje")
+        self.assertContains(response, 'class="hero-title-main"')
 
     @patch("movies.views.get_random_title")
     @patch("movies.views.get_genres", return_value=[{"id": 18, "name": "Drama"}])
@@ -81,6 +82,8 @@ class MovieViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Falha controlada")
+        self.assertContains(response, 'data-error-alert')
+        self.assertContains(response, "Sorteio não concluído")
 
     @patch("movies.views.get_random_title")
     @patch("movies.views.get_genres", return_value=[])
