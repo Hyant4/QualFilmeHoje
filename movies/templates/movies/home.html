@@ -37,9 +37,10 @@
         </a>
         <div class="nav-actions">
           {% if user.is_authenticated %}
-            <span class="user-summary" title="{{ user.email|default:user.username }}">
-              <span class="user-avatar" aria-hidden="true">{{ user.email|default:user.username|first|upper }}</span>
-              <span class="user-copy"><small>Sessão ativa</small><strong>{{ user.email|default:user.username }}</strong></span>
+            {% firstof user.get_full_name user.username user.email as account_name %}
+            <span class="user-summary" title="{{ account_name }}">
+              <span class="user-avatar" aria-hidden="true">{{ account_name|first|upper }}</span>
+              <span class="user-copy"><small>Sessão ativa</small><strong>{{ account_name }}</strong></span>
             </span>
             <form method="post" action="{% url 'account_logout' %}" class="nav-logout-form">
               {% csrf_token %}

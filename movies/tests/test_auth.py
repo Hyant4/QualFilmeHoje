@@ -3,6 +3,7 @@ import uuid
 from unittest.mock import patch
 from urllib.parse import urlparse
 
+from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -29,9 +30,9 @@ GOOGLE_PROVIDER_SETTINGS = {
 class AuthenticationTests(TestCase):
     password = "CinemaPortfolio2026!"
 
-    def create_user(self, email="pessoa@example.com"):
+    def create_user(self, email="pessoa@example.com", username=None):
         user = get_user_model().objects.create_user(
-            username=email,
+            username=username or email.split("@", maxsplit=1)[0],
             email=email,
             password=self.password,
         )
@@ -58,6 +59,7 @@ class AuthenticationTests(TestCase):
         self.assertContains(login_response, 'rel="icon"')
         self.assertEqual(signup_response.status_code, 200)
         self.assertContains(signup_response, "Criar com Google")
+        self.assertContains(signup_response, "Nome de usuário")
         self.assertContains(signup_response, "Confirme a senha")
         self.assertContains(signup_response, "link para confirmar seu e-mail")
 
@@ -65,6 +67,7 @@ class AuthenticationTests(TestCase):
         response = self.client.post(
             reverse("account_signup"),
             {
+                "username": "nova_pessoa",
                 "email": "nova@example.com",
                 "password1": self.password,
                 "password2": self.password,
@@ -73,6 +76,7 @@ class AuthenticationTests(TestCase):
 
         self.assertRedirects(response, reverse("account_email_verification_sent"))
         user = get_user_model().objects.get(email="nova@example.com")
+        self.assertEqual(user.username, "nova_pessoa")
         email_address = EmailAddress.objects.get(user=user, email=user.email)
         self.assertFalse(email_address.verified)
         self.assertNotIn("_auth_user_id", self.client.session)
@@ -139,6 +143,30 @@ class AuthenticationTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.check_password(new_password))
         self.assertFalse(user.check_password(self.password))
+
+    def test_google_profile_name_generates_unique_username(self):
+        user = get_user_model()(
+            email="hyan.google@example.com",
+            first_name="Hyan",
+            last_name="Souza",
+        )
+
+        get_adapter().populate_username(None, user)
+
+        self.assertEqual(user.username, "hyan_souza")
+
+    def test_google_username_gets_suffix_when_name_is_already_used(self):
+        self.create_user("outra@example.com", username="hyan_souza")
+        user = get_user_model()(
+            email="hyan.google@example.com",
+            first_name="Hyan",
+            last_name="Souza",
+        )
+
+        get_adapter().populate_username(None, user)
+
+        self.assertTrue(user.username.startswith("hyan_souza"))
+        self.assertNotEqual(user.username, "hyan_souza")
 
     def test_email_login_and_post_logout(self):
         user = self.create_user()
@@ -212,11 +240,22 @@ class AuthenticationTests(TestCase):
         anonymous_response = self.client.get(reverse("movies:home"))
         self.assertContains(anonymous_response, ">Entrar</a>")
 
-        user = self.create_user("cinema@example.com")
+        user = self.create_user("cinema@example.com", username="cinefilo")
         self.client.force_login(user)
         authenticated_response = self.client.get(reverse("movies:home"))
-        self.assertContains(authenticated_response, "cinema@example.com")
+        self.assertContains(authenticated_response, "cinefilo")
         self.assertContains(authenticated_response, ">Sair</button>")
+
+    def test_home_header_uses_google_full_name(self):
+        user = self.create_user("google@example.com", username="hyan_souza")
+        user.first_name = "Hyan"
+        user.last_name = "Souza"
+        user.save(update_fields=["first_name", "last_name"])
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("movies:home"))
+
+        self.assertContains(response, "Hyan Souza")
 
     @patch("movies.views.get_random_title")
     @patch("movies.views.get_genres", return_value=[])

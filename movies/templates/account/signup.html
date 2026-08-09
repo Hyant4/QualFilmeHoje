@@ -27,6 +27,12 @@
         <div class="form-errors" role="alert">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
       {% endif %}
 
+      <div class="auth-field{% if form.username.errors %} has-error{% endif %}">
+        <label for="{{ form.username.id_for_label }}">Nome de usuário</label>
+        {{ form.username }}
+        {% if form.username.help_text %}<div class="field-help">{{ form.username.help_text|safe }}</div>{% endif %}
+        {% for error in form.username.errors %}<small>{{ error }}</small>{% endfor %}
+      </div>
       <div class="auth-field{% if form.email.errors %} has-error{% endif %}">
         <label for="{{ form.email.id_for_label }}">E-mail</label>
         {{ form.email }}
