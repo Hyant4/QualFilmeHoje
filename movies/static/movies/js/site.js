@@ -96,9 +96,18 @@ document.querySelectorAll("[data-tabs]").forEach((tabs) => {
 
 const result = document.querySelector("[data-movie-result]");
 if (result && window.location.hash !== "#gerador") {
-  window.requestAnimationFrame(() => {
-    result.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  const revealResult = () => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.requestAnimationFrame(() => {
+      result.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    });
+  };
+
+  if (document.readyState === "complete") {
+    revealResult();
+  } else {
+    window.addEventListener("load", revealResult, { once: true });
+  }
 }
 
 document.querySelectorAll("[data-favorite-form]").forEach((form) => {
