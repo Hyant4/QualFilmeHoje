@@ -114,18 +114,20 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
 .tmdb-score .score-value > span:last-child { align-self: flex-end; padding-bottom: 3px; color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; }
 .tmdb-score small { display: block; margin: 4px 0 0 36px; color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 0.58rem; }
 .movie-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; padding-top: 32px; border-top: 1px solid var(--line); }
+.poster-column { align-self: start; }
 .movie-poster, .poster-placeholder { width: 100%; aspect-ratio: 2 / 3; border: 1px solid var(--line); object-fit: cover; }
 .poster-placeholder { display: grid; place-items: end start; padding: 20px; background: linear-gradient(155deg, var(--maroon), var(--maroon-deep) 65%, #0b0708); font-size: 1.8rem; text-transform: uppercase; }
-.quick-facts { margin: 0; border: 1px solid var(--line); border-top: 0; }
-.quick-facts div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; }
-.quick-facts div + div { border-top: 1px solid var(--line); }
-.quick-facts dt { color: var(--muted); font-size: 0.72rem; }
-.quick-facts dd { margin: 0; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; }
 .movie-content { min-width: 0; }
 .tagline { margin: 0 0 16px; color: var(--muted); font-family: "Oswald", sans-serif; font-size: 1.25rem; }
 .genre-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .genre-list span { padding: 5px 9px; border: 1px solid var(--line); color: var(--gold); font-family: "Oswald", sans-serif; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.title-facts { display: flex; flex-wrap: wrap; margin: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.title-facts > div { min-width: 180px; display: flex; align-items: baseline; gap: 12px; padding: 11px 18px 11px 4px; }
+.title-facts > div + div { padding-left: 18px; border-left: 1px solid var(--line); }
+.title-facts dt { color: var(--muted); font-size: 0.72rem; }
+.title-facts dd { margin: 0; color: var(--cream); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; }
 .people-details { margin: 0 0 24px; border-top: 1px solid var(--line); }
+.title-facts + .people-details { border-top: 0; }
 .people-details > div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 20px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
 .people-details dt { color: var(--cream); font-size: 0.78rem; font-weight: 600; }
 .people-details dd { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 0; color: var(--gold-soft); font-size: 0.8rem; }
@@ -266,13 +268,14 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
   .tmdb-score .score-value { grid-column: 1; }
   .tmdb-score small { grid-column: 2; align-self: end; margin: 0 0 4px; }
   .movie-layout { grid-template-columns: 1fr; gap: 24px; padding-top: 22px; }
-  .poster-column { display: grid; grid-template-columns: minmax(126px, 43%) minmax(0, 1fr); align-items: stretch; gap: 12px; }
-  .movie-poster, .poster-placeholder { max-width: none; height: 100%; min-height: 198px; object-fit: cover; }
-  .quick-facts { display: grid; align-content: stretch; border: 1px solid var(--line); }
-  .quick-facts div { min-width: 0; align-items: flex-start; flex-direction: column; justify-content: center; gap: 2px; padding: 9px 10px; }
-  .quick-facts dt, .quick-facts dd { overflow-wrap: anywhere; }
+  .poster-column { display: block; }
+  .movie-poster, .poster-placeholder { width: min(190px, 55vw); max-width: none; height: auto; min-height: 0; }
   .tagline { margin-top: 8px; }
   .genre-list { gap: 6px; margin-bottom: 18px; }
+  .title-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .title-facts > div { min-width: 0; padding: 10px; }
+  .title-facts > div + div { padding-left: 10px; }
+  .title-facts > div:nth-child(3):last-child { grid-column: 1 / -1; border-top: 1px solid var(--line); border-left: 0; }
   .people-details { margin-bottom: 22px; }
   .people-details > div { grid-template-columns: 100px minmax(0, 1fr); gap: 14px; padding-block: 11px; }
   .tab-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; border: 1px solid var(--line); }
@@ -323,8 +326,6 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
   .hero h1 { font-size: 3.05rem; }
   .hero-copy > p:first-child { font-size: 0.88rem; }
   .hero-media { bottom: -130px; opacity: 0.38; }
-  .poster-column { grid-template-columns: 118px minmax(0, 1fr); gap: 9px; }
-  .quick-facts div { padding-inline: 8px; }
   .tab-list button { font-size: 0.66rem; }
 }
 
