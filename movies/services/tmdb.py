@@ -24,6 +24,8 @@ BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/w1280"
 DISCOVERY_CACHE_SECONDS = 10 * 60
 TITLE_CACHE_SECONDS = 12 * 60 * 60
 TRENDS_CACHE_SECONDS = 30 * 60
+RECENT_RELEASE_DAYS = 30
+TRENDS_MIN_VOTES = 20
 MAX_STREAMING_CANDIDATES = 2
 
 
@@ -276,8 +278,8 @@ def get_recent_top_movies(limit=10):
 
     limit = min(max(int(limit), 1), 20)
     today = date.today()
-    cutoff = today - timedelta(days=548)
-    cache_key = f"tmdb:recent-top:v1:{today.isoformat()}:{limit}"
+    cutoff = today - timedelta(days=RECENT_RELEASE_DAYS)
+    cache_key = f"tmdb:recent-top:v4:{today.isoformat()}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -287,16 +289,23 @@ def get_recent_top_movies(limit=10):
         language="pt-BR",
         include_adult="false",
         include_video="false",
-        region="BR",
         **{
             "primary_release_date.gte": cutoff.isoformat(),
             "primary_release_date.lte": today.isoformat(),
-            "vote_count.gte": 100,
+            "vote_count.gte": TRENDS_MIN_VOTES,
             "sort_by": "vote_average.desc",
         },
     )
+    ranked_results = sorted(
+        data.get("results", []),
+        key=lambda item: (
+            _normalise_rating(item.get("vote_average")),
+            item.get("vote_count") or 0,
+        ),
+        reverse=True,
+    )
     movies = []
-    for item in data.get("results", []):
+    for item in ranked_results:
         if not item.get("id") or not item.get("title"):
             continue
         movies.append(

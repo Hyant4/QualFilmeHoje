@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import patch
 
 from django.core.cache import cache
@@ -40,7 +41,11 @@ class TMDBServiceTests(SimpleTestCase):
         discover_call = mock_get.call_args
         self.assertEqual(discover_call.args[0], "/discover/movie")
         self.assertEqual(discover_call.kwargs["sort_by"], "vote_average.desc")
-        self.assertEqual(discover_call.kwargs["vote_count.gte"], 100)
+        self.assertEqual(discover_call.kwargs["vote_count.gte"], 20)
+        oldest = date.fromisoformat(discover_call.kwargs["primary_release_date.gte"])
+        newest = date.fromisoformat(discover_call.kwargs["primary_release_date.lte"])
+        self.assertEqual((newest - oldest).days, 30)
+        self.assertNotIn("region", discover_call.kwargs)
 
     @patch("movies.services.tmdb.get_streaming_groups", return_value=[])
     @patch("movies.services.tmdb._fetch_title_extras")
