@@ -13,4 +13,6 @@ urlpatterns = [
         name="title_detail",
     ),
     path("favoritos/alternar/", views.toggle_title_favorite, name="toggle_favorite"),
+    path("conta/whatsapp/", views.whatsapp_settings, name="whatsapp_settings"),
+    path("webhook/whatsapp/", views.whatsapp_webhook, name="whatsapp_webhook"),
 ]

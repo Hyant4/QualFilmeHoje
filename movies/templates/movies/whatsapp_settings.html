@@ -1,0 +1,30 @@
+{% extends "account/base_entrance.html" %}
+
+{% block head_title %}WhatsApp{% endblock %}
+
+{% block content %}
+  <section class="auth-card" aria-labelledby="whatsapp-title">
+    <div class="auth-card-head">
+      <p class="eyebrow">Conexão opcional</p>
+      <h2 id="whatsapp-title">Seus favoritos no WhatsApp</h2>
+      <p>Vincule um número para pedir sua lista ao bot quando ele estiver disponível.</p>
+    </div>
+
+    <form method="post" class="auth-form" novalidate>
+      {% csrf_token %}
+      <div class="auth-field{% if form.phone_number.errors %} has-error{% endif %}">
+        <label for="{{ form.phone_number.id_for_label }}">{{ form.phone_number.label }}</label>
+        {{ form.phone_number }}
+        <div class="field-help">{{ form.phone_number.help_text }}</div>
+        {% for error in form.phone_number.errors %}<small>{{ error }}</small>{% endfor %}
+      </div>
+      <button type="submit" class="auth-submit">Salvar número <span aria-hidden="true">→</span></button>
+    </form>
+
+    {% if contact %}
+      <p class="auth-footnote">Número salvo: {{ contact.phone_number }}. {% if contact.is_verified %}Conexão confirmada.{% else %}A confirmação será feita ao enviar a primeira mensagem ao bot.{% endif %}</p>
+    {% else %}
+      <p class="auth-footnote">Você pode deixar esse campo vazio e continuar usando o site normalmente.</p>
+    {% endif %}
+  </section>
+{% endblock %}

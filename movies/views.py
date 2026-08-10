@@ -1,11 +1,20 @@
+import json
+import logging
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
-from django.views.decorators.http import require_GET, require_POST
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
+from django.db import IntegrityError
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from .models import Title
+from .forms import WhatsAppContactForm
+from .models import Favorite, Title, WhatsAppContact
 from .services.library import (
     get_library,
     is_favorite,
@@ -23,9 +32,16 @@ from .services.tmdb import (
     get_title_details,
     get_upcoming_movies,
 )
+from .services.whatsapp import (
+    WhatsAppError,
+    send_text_message,
+    webhook_signature_is_valid,
+)
 
 DEFAULT_MIN_RATING = 6.0
 DEFAULT_MAX_RATING = 10.0
+WHATSAPP_INBOUND_CACHE_SECONDS = 24 * 60 * 60
+logger = logging.getLogger(__name__)
 
 
 def _safe_genres():
@@ -247,3 +263,143 @@ def toggle_title_favorite(request):
             ),
         }
     )
+
+
+@login_required
+def whatsapp_settings(request):
+    contact = WhatsAppContact.objects.filter(user=request.user).first()
+    if request.method == "POST":
+        form = WhatsAppContactForm(request.POST)
+        if form.is_valid():
+            phone_number = form.cleaned_data["phone_number"]
+            if not phone_number:
+                if contact:
+                    contact.delete()
+                messages.success(request, "Número do WhatsApp removido da sua conta.")
+            elif contact and contact.phone_number == phone_number:
+                messages.success(request, "Seu número do WhatsApp continua vinculado.")
+            else:
+                try:
+                    WhatsAppContact.objects.update_or_create(
+                        user=request.user,
+                        defaults={"phone_number": phone_number, "is_verified": False},
+                    )
+                except IntegrityError:
+                    form.add_error(
+                        "phone_number", "Este número já está vinculado a outra conta."
+                    )
+                else:
+                    messages.success(
+                        request,
+                        "Número salvo. Quando o bot estiver disponível, envie uma mensagem por esse WhatsApp para confirmar a conexão.",
+                    )
+                    return redirect("movies:whatsapp_settings")
+            if not form.errors:
+                return redirect("movies:whatsapp_settings")
+    else:
+        form = WhatsAppContactForm(
+            initial={"phone_number": contact.phone_number if contact else ""}
+        )
+
+    return render(
+        request,
+        "movies/whatsapp_settings.html",
+        {"form": form, "contact": contact},
+    )
+
+
+def _format_favorites(contact):
+    favorites = list(
+        Favorite.objects.filter(user=contact.user)
+        .select_related("title")
+        .order_by("-created_at")[:20]
+    )
+    if not favorites:
+        return "Sua lista ainda não tem títulos salvos. Entre no QualFilmeHoje e adicione um filme ou série à sua lista."
+
+    lines = ["Seus títulos salvos:"]
+    for index, favorite in enumerate(favorites, start=1):
+        title = favorite.title
+        media_type = "Série" if title.media_type == Title.TV else "Filme"
+        details = [media_type]
+        if title.release_year:
+            details.append(str(title.release_year))
+        if title.vote_average is not None:
+            details.append(f"★ {title.vote_average}/10")
+        lines.append(f"{index}. {title.name} ({' · '.join(details)})")
+    if len(favorites) == 20:
+        lines.append("Mostrando os 20 títulos mais recentes.")
+    return "\n".join(lines)
+
+
+def _incoming_messages(payload):
+    if not isinstance(payload, dict) or payload.get("object") != "whatsapp_business_account":
+        return []
+    messages = []
+    for entry in payload.get("entry", []):
+        for change in entry.get("changes", []):
+            value = change.get("value", {})
+            if isinstance(value, dict):
+                messages.extend(value.get("messages", []))
+    return [message for message in messages if isinstance(message, dict)]
+
+
+def _reply_to_whatsapp_message(message):
+    message_id = message.get("id")
+    sender = str(message.get("from") or "").strip()
+    if not message_id or not sender.isdigit():
+        return
+    cache_key = f"whatsapp:inbound:{message_id}"
+    if not cache.add(cache_key, True, WHATSAPP_INBOUND_CACHE_SECONDS):
+        return
+
+    try:
+        contact = WhatsAppContact.objects.select_related("user").filter(
+            phone_number=f"+{sender}"
+        ).first()
+        if not contact:
+            send_text_message(
+                sender,
+                "Este número ainda não está vinculado a uma conta do QualFilmeHoje. Entre no site, acesse Conta > WhatsApp e salve este número.",
+            )
+            return
+
+        if not contact.is_verified:
+            contact.is_verified = True
+            contact.save(update_fields=["is_verified", "updated_at"])
+
+        text = str(message.get("text", {}).get("body") or "").strip().casefold()
+        if text in {"favoritos", "favorito", "minha lista", "lista"}:
+            response = _format_favorites(contact)
+        else:
+            response = "Olá! Envie *favoritos* para receber seus filmes e séries salvos no QualFilmeHoje."
+        send_text_message(sender, response)
+    except WhatsAppError:
+        cache.delete(cache_key)
+        logger.warning("Não foi possível processar a resposta do bot para uma mensagem recebida.")
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def whatsapp_webhook(request):
+    """Handshake e recebimento de eventos da WhatsApp Cloud API."""
+
+    if request.method == "GET":
+        mode = request.GET.get("hub.mode", "")
+        token = request.GET.get("hub.verify_token", "")
+        challenge = request.GET.get("hub.challenge", "")
+        if mode == "subscribe" and token and token == settings.WHATSAPP_VERIFY_TOKEN:
+            return HttpResponse(challenge, content_type="text/plain")
+        return HttpResponseForbidden("Verificação do webhook recusada.")
+
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    if not webhook_signature_is_valid(request.body, signature):
+        return HttpResponseForbidden("Assinatura inválida.")
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return HttpResponse("", status=400)
+
+    for message in _incoming_messages(payload):
+        _reply_to_whatsapp_message(message)
+    return JsonResponse({"status": "ok"})
