@@ -128,8 +128,9 @@ class SEOMetadataTests(TestCase):
     def test_title_page_has_its_own_canonical_and_description(self, mock_details):
         mock_details.return_value = {
             "id": 88,
-            "title": "Filme SEO",
+            "title": "Um filme com um nome deliberadamente muito longo para SEO",
             "media_type": "movie",
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
             "reviews": [],
             "provider_groups": [],
             "credit_sections": [],
@@ -142,7 +143,15 @@ class SEOMetadataTests(TestCase):
         self.assertContains(response, f'<link rel="canonical" href="{CANONICAL_SITE}{path}">')
         self.assertContains(
             response,
-            "Veja sinopse, trailer, avaliação, elenco e onde assistir Filme SEO no Brasil.",
+            "Veja sinopse, trailer, avaliação, elenco e onde assistir Um filme com um nome deliberadamente muito longo para SEO no Brasil.",
+        )
+        html = response.content.decode()
+        title = re.search(r"<title>(.*?)</title>", html).group(1)
+        self.assertLessEqual(len(title), 59)
+        self.assertEqual(len(re.findall(r"<h1(?:\s|>)", html)), 1)
+        self.assertContains(
+            response,
+            'alt="Imagem de fundo de Um filme com um nome deliberadamente muito longo para SEO"',
         )
         self.assertNotContains(response, 'type="application/ld+json"')
 

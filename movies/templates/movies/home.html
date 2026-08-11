@@ -27,7 +27,7 @@
   <meta name="twitter:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}">
   <meta name="twitter:description" content="{% if is_detail_page and movie %}Sinopse, trailer, avaliação, elenco e onde assistir no Brasil.{% else %}Escolha o clima. A gente escolhe o filme ou a série.{% endif %}">
   <meta name="twitter:image" content="{{ site_url }}{{ og_image }}">
-  <title>{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}</title>
+  <title>{% if is_detail_page and movie %}{{ movie.title|truncatechars:43 }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}</title>
   <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="preload" as="image" href="{{ hero_image }}" type="image/webp">
@@ -41,7 +41,7 @@
     <div class="wrap">
       <nav class="nav" aria-label="Navegação principal">
         <a href="{% url 'movies:home' %}" class="brand-logo" aria-label="QualFilmeHoje — início">
-          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="QualFilmeHoje" width="48" height="48">
         </a>
         <div class="nav-actions">
           {% if user.is_authenticated %}
@@ -106,7 +106,7 @@
             <span class="tv-screen-glow" aria-hidden="true"></span>
             <figcaption class="tv-screen-ui">
               <span class="tv-wordmark" aria-label="QualFilmeHoje">
-                <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="32" height="32" aria-hidden="true">
+                <img src="{% static 'movies/images/logo-q.png' %}" alt="Logo do QualFilmeHoje" width="32" height="32" aria-hidden="true">
                 <strong aria-hidden="true">ualFilmeHoje</strong>
               </span>
               <span class="tv-loader" aria-hidden="true"></span>
@@ -220,13 +220,13 @@
     {% if movie %}
       <section class="result-section" id="resultado" data-movie-result>
         {% if movie.backdrop_url %}
-          <div class="backdrop" aria-hidden="true"><img src="{{ movie.backdrop_url }}" alt=""></div>
+          <div class="backdrop" aria-hidden="true"><img src="{{ movie.backdrop_url }}" alt="Imagem de fundo de {{ movie.title }}"></div>
         {% endif %}
         <div class="wrap result-wrap">
           <div class="result-heading">
             <div class="result-title-block">
               <p class="eyebrow">{% if is_detail_page %}Informações do TMDB{% else %}Sua sessão foi escolhida{% endif %}</p>
-              <h2>{{ movie.title }}</h2>
+              <h1>{{ movie.title }}</h1>
               {% if movie.can_favorite %}
                 <form class="favorite-form" method="post" action="{% url 'movies:toggle_favorite' %}" data-favorite-form>
                   {% csrf_token %}
@@ -347,7 +347,7 @@
                           <div class="providers">
                             {% for provider in group.providers %}
                               <a class="provider" href="{{ provider.web_url }}" target="_blank" rel="noopener" aria-label="Abrir {{ movie.title }} no {{ provider.provider_name }}">
-                                {% if provider.logo_url %}<img src="{{ provider.logo_url }}" alt="" loading="lazy">{% endif %}
+                                {% if provider.logo_url %}<img src="{{ provider.logo_url }}" alt="Logo do {{ provider.provider_name }}" loading="lazy">{% endif %}
                                 <span><strong>{{ provider.provider_name }}</strong>{% if provider.format %}<small>{{ provider.format }}</small>{% endif %}</span>
                                 <i aria-hidden="true">↗</i>
                               </a>
@@ -656,7 +656,7 @@
     <div class="wrap">
       <div class="footer-row">
         <a href="{% url 'movies:home' %}" class="brand-logo brand-logo-footer" aria-label="QualFilmeHoje — início">
-          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="QualFilmeHoje" width="48" height="48">
         </a>
         <div class="footer-links">
           <a href="{% url 'movies:privacy' %}" class="text-link">Privacidade</a>
