@@ -2,6 +2,8 @@ const ratingInput = document.querySelector("#min_rating");
 const ratingOutput = document.querySelector("#ratingOutput");
 const maxRatingInput = document.querySelector("#max_rating");
 const maxRatingOutput = document.querySelector("#maxRatingOutput");
+const releaseYearInput = document.querySelector("#min_release_year");
+const releaseYearOutput = document.querySelector("#releaseYearOutput");
 const mediaInput = document.querySelector("[data-media-input]");
 const mediaButtons = [...document.querySelectorAll("[data-media-option]")];
 const genreFields = [...document.querySelectorAll("[data-genre-field]")];
@@ -68,6 +70,20 @@ function updateRatingRange(changedInput) {
 ratingInput?.addEventListener("input", () => updateRatingRange(ratingInput));
 maxRatingInput?.addEventListener("input", () => updateRatingRange(maxRatingInput));
 updateRatingRange();
+
+function updateReleaseYearDisplay() {
+  if (!releaseYearInput || !releaseYearOutput) return;
+  const value = Number(releaseYearInput.value);
+  const min = Number(releaseYearInput.min);
+  const max = Number(releaseYearInput.max);
+  const progress = ((value - min) / (max - min)) * 100;
+  releaseYearOutput.value = String(value);
+  releaseYearOutput.textContent = String(value);
+  releaseYearInput.style.setProperty("--range-progress", `${progress}%`);
+}
+
+releaseYearInput?.addEventListener("input", updateReleaseYearDisplay);
+updateReleaseYearDisplay();
 
 document.querySelector("[data-alert-close]")?.addEventListener("click", (event) => {
   event.currentTarget.closest("[data-error-alert]")?.remove();

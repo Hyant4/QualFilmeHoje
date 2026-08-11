@@ -235,13 +235,19 @@ class TMDBServiceTests(SimpleTestCase):
 
         mock_get.side_effect = response
         movie = get_random_movie(
-            genre_id="18", min_rating="7.5", max_rating="8.4"
+            genre_id="18",
+            min_rating="7.5",
+            max_rating="8.4",
+            min_release_year=2001,
         )
 
         discover_call = next(call for call in mock_get.call_args_list if call.args[0] == "/discover/movie")
         self.assertEqual(discover_call.kwargs["vote_average.gte"], 7.5)
         self.assertEqual(discover_call.kwargs["vote_average.lte"], 8.4)
         self.assertEqual(discover_call.kwargs["with_genres"], "18")
+        self.assertEqual(
+            discover_call.kwargs["primary_release_date.gte"], "2001-01-01"
+        )
         details_call = next(call for call in mock_get.call_args_list if call.args[0] == "/movie/42")
         self.assertEqual(
             details_call.kwargs["append_to_response"],
@@ -286,10 +292,13 @@ class TMDBServiceTests(SimpleTestCase):
             raise AssertionError(f"Chamada inesperada: {path} {params}")
 
         mock_get.side_effect = response
-        series = get_random_title("tv", genre_id="18", min_rating="7.4")
+        series = get_random_title(
+            "tv", genre_id="18", min_rating="7.4", min_release_year=2010
+        )
 
         discover_call = next(call for call in mock_get.call_args_list if call.args[0] == "/discover/tv")
         self.assertEqual(discover_call.kwargs["vote_average.gte"], 7.4)
+        self.assertEqual(discover_call.kwargs["first_air_date.gte"], "2010-01-01")
         self.assertEqual(series["title"], "Série teste")
         self.assertEqual(series["release_date"], "2025-02-01")
         self.assertEqual(series["runtime"], 48)

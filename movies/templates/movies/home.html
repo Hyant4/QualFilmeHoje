@@ -139,6 +139,26 @@
 
           <div class="field score-field">
             <div class="score-label">
+              <label for="min_release_year">Ano mínimo de lançamento</label>
+              <output for="min_release_year" id="releaseYearOutput">{{ selected_min_release_year }}</output>
+            </div>
+            <input
+              type="range"
+              id="min_release_year"
+              name="min_release_year"
+              min="{{ min_release_year_limit }}"
+              max="{{ max_release_year_limit }}"
+              step="1"
+              value="{{ selected_min_release_year }}"
+              aria-describedby="releaseYearScale"
+            >
+            <div class="range-scale mono" id="releaseYearScale" aria-hidden="true">
+              <span>{{ min_release_year_limit }}</span><span>{{ max_release_year_limit }}</span>
+            </div>
+          </div>
+
+          <div class="field score-field">
+            <div class="score-label">
               <label for="min_rating">Nota mínima no TMDB</label>
               <output for="min_rating" id="ratingOutput">{{ selected_min_rating|default:6|floatformat:1 }}+</output>
             </div>

@@ -7,6 +7,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
@@ -32,6 +33,7 @@ from .services.tmdb import (
 
 DEFAULT_MIN_RATING = 6.0
 DEFAULT_MAX_RATING = 10.0
+MIN_RELEASE_YEAR = 1900
 MAX_GENRE_ID = 999_999
 MAX_TMDB_ID = 2_147_483_647
 CSP_REPORT_MAX_BYTES = 16 * 1024
@@ -156,6 +158,14 @@ def _parse_rating(value, default):
     return round(min(max(parsed, 0.0), 10.0), 1)
 
 
+def _parse_min_release_year(value):
+    current_year = timezone.localdate().year
+    parsed = _parse_ascii_int(value, maximum=9999)
+    if parsed is None:
+        return MIN_RELEASE_YEAR
+    return min(max(parsed, MIN_RELEASE_YEAR), current_year)
+
+
 def _parse_filters(request):
     media_type = request.POST.get("media_type", "movie")
     if media_type not in {"movie", "tv"}:
@@ -172,7 +182,10 @@ def _parse_filters(request):
         request.POST.get("max_rating", DEFAULT_MAX_RATING), DEFAULT_MAX_RATING
     )
     max_rating = max(max_rating, min_rating)
-    return media_type, genre_id, min_rating, max_rating
+    min_release_year = _parse_min_release_year(
+        request.POST.get("min_release_year", MIN_RELEASE_YEAR)
+    )
+    return media_type, genre_id, min_rating, max_rating, min_release_year
 
 
 def _visitor_id(request, *, create=False):
@@ -210,6 +223,7 @@ def privacy(request):
 
 def home(request):
     genre_sets, error, rows, row_errors = _safe_landing_data()
+    current_year = timezone.localdate().year
     context = {
         "movie_genres": genre_sets["movie"],
         "tv_genres": genre_sets["tv"],
@@ -217,6 +231,9 @@ def home(request):
         "selected_media_type": "movie",
         "selected_min_rating": DEFAULT_MIN_RATING,
         "selected_max_rating": DEFAULT_MAX_RATING,
+        "selected_min_release_year": MIN_RELEASE_YEAR,
+        "min_release_year_limit": MIN_RELEASE_YEAR,
+        "max_release_year_limit": current_year,
         "trending_movies": rows["movie"],
         "trending_series": rows["tv"],
         "now_playing_movies": rows["now_playing"],
@@ -233,8 +250,11 @@ def home(request):
 @require_POST
 @rate_limit("generate", ip=(30, 300), user=(20, 300), methods={"POST"})
 def generate_movie(request):
-    media_type, genre_id, min_rating, max_rating = _parse_filters(request)
+    media_type, genre_id, min_rating, max_rating, min_release_year = _parse_filters(
+        request
+    )
     genre_sets, genres_error = _safe_genres()
+    current_year = timezone.localdate().year
     context = {
         "movie_genres": genre_sets["movie"],
         "tv_genres": genre_sets["tv"],
@@ -242,11 +262,18 @@ def generate_movie(request):
         "selected_genre": genre_id,
         "selected_min_rating": min_rating,
         "selected_max_rating": max_rating,
+        "selected_min_release_year": min_release_year,
+        "min_release_year_limit": MIN_RELEASE_YEAR,
+        "max_release_year_limit": current_year,
     }
 
     try:
         movie = get_random_title(
-            media_type, genre_id or None, min_rating, max_rating
+            media_type,
+            genre_id or None,
+            min_rating,
+            max_rating,
+            min_release_year=min_release_year,
         )
         visitor_id = _visitor_id(request, create=True)
         saved_title = record_generation(

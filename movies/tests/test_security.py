@@ -39,10 +39,11 @@ class InputValidationTests(SimpleTestCase):
                 "genre_id": "²",
                 "min_rating": "NaN",
                 "max_rating": "9" * 100,
+                "min_release_year": "9" * 100,
             },
         )
 
-        self.assertEqual(_parse_filters(request), ("movie", "", 6.0, 10.0))
+        self.assertEqual(_parse_filters(request), ("movie", "", 6.0, 10.0, 1900))
 
 
 class ApplicationRateLimitTests(SimpleTestCase):

@@ -76,7 +76,7 @@ button, a { touch-action: manipulation; }
 .media-picker { position: relative; z-index: 3; display: inline-flex; gap: 4px; margin-top: 22px; padding: 4px; border: 1px solid var(--line); background: rgba(14, 10, 10, 0.8); }
 .media-picker button { min-width: 112px; padding: 10px 20px; border: 0; background: transparent; color: var(--muted); font-family: "Oswald", sans-serif; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
 .media-picker button[aria-selected="true"] { background: var(--gold); color: #241905; }
-.generator { position: relative; z-index: 3; display: grid; grid-template-columns: minmax(190px, 1fr) repeat(2, minmax(175px, 0.9fr)) auto; align-items: end; gap: 22px; margin-top: 10px; padding: 24px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24); }
+.generator { position: relative; z-index: 3; display: grid; grid-template-columns: minmax(165px, 0.95fr) minmax(160px, 0.8fr) repeat(2, minmax(160px, 0.85fr)) auto; align-items: end; gap: 16px; margin-top: 10px; padding: 24px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 24px 80px rgba(0, 0, 0, 0.24); }
 .field label { display: block; margin-bottom: 10px; color: var(--cream); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .select-wrap { position: relative; }
 .select-wrap::after { content: "⌄"; position: absolute; right: 15px; top: 50%; color: var(--gold); pointer-events: none; transform: translateY(-55%); }

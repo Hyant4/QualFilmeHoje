@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from movies.models import Favorite, Generation, Title
 from movies.services.tmdb import TMDBError
@@ -73,6 +74,9 @@ class MovieViewTests(TestCase):
         self.assertContains(response, 'data-media-option="movie"')
         self.assertContains(response, 'type="range"')
         self.assertContains(response, 'step="0.1"')
+        self.assertContains(response, 'name="min_release_year"')
+        self.assertContains(response, 'step="1"')
+        self.assertContains(response, "Ano mínimo de lançamento")
         self.assertContains(response, "Nota máxima no TMDB")
         self.assertContains(response, "Séries")
         self.assertContains(response, "Nota mínima no TMDB")
@@ -149,11 +153,14 @@ class MovieViewTests(TestCase):
                 "genre_id": "18",
                 "min_rating": "7.5",
                 "max_rating": "9.0",
+                "min_release_year": "2001",
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_random.assert_called_once_with("movie", "18", 7.5, 9.0)
+        mock_random.assert_called_once_with(
+            "movie", "18", 7.5, 9.0, min_release_year=2001
+        )
         self.assertContains(response, "Filme teste")
         self.assertContains(response, "Trailer")
         self.assertContains(response, "Reviews")
@@ -189,7 +196,9 @@ class MovieViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_random.assert_called_once_with("movie", None, 6.0, 10.0)
+        mock_random.assert_called_once_with(
+            "movie", None, 6.0, 10.0, min_release_year=1900
+        )
 
     @patch("movies.views.get_random_title")
     @patch("movies.views.get_genres", return_value=[])
@@ -213,7 +222,9 @@ class MovieViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        mock_random.assert_called_once_with("tv", "10765", 6.1, 8.7)
+        mock_random.assert_called_once_with(
+            "tv", "10765", 6.1, 8.7, min_release_year=1900
+        )
         self.assertContains(response, 'value="tv" data-media-input')
         self.assertContains(response, "Série teste")
 
@@ -233,7 +244,34 @@ class MovieViewTests(TestCase):
             {"min_rating": "8.4", "max_rating": "6.0"},
         )
 
-        mock_random.assert_called_once_with("movie", None, 8.4, 8.4)
+        mock_random.assert_called_once_with(
+            "movie", None, 8.4, 8.4, min_release_year=1900
+        )
+
+    @patch("movies.views.get_random_title")
+    @patch("movies.views.get_genres", return_value=[])
+    def test_release_year_is_limited_to_supported_range(
+        self, _mock_genres, mock_random
+    ):
+        mock_random.return_value = {
+            "title": "Filme",
+            "reviews": [],
+            "provider_groups": [],
+        }
+
+        response = self.client.post(
+            reverse("movies:generate_movie"),
+            {"min_release_year": "9999"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_random.assert_called_once_with(
+            "movie",
+            None,
+            6.0,
+            10.0,
+            min_release_year=timezone.localdate().year,
+        )
 
     def test_favorite_can_be_added_and_removed_only_from_visitor_history(self):
         visitor_id = uuid.uuid4()

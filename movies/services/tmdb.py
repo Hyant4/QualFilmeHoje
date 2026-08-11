@@ -34,6 +34,7 @@ RECENT_RELEASE_DAYS = 30
 TRENDS_MIN_VOTES = 20
 MAX_STREAMING_CANDIDATES = 2
 MAX_TMDB_ID = 2_147_483_647
+MIN_RELEASE_YEAR = 1900
 
 
 class TMDBError(Exception):
@@ -594,11 +595,14 @@ def get_upcoming_movies(limit=10):
     return _get_movie_release_list("upcoming", limit)
 
 
-def _discovery_cache_key(media_type, genre_id, min_rating, max_rating):
+def _discovery_cache_key(
+    media_type, genre_id, min_rating, max_rating, min_release_year=None
+):
     genre_key = genre_id or "all"
     min_key = f"{min_rating:.1f}".replace(".", "-")
     max_key = f"{max_rating:.1f}".replace(".", "-")
-    return f"tmdb:discover:v2:{media_type}:{genre_key}:{min_key}:{max_key}"
+    year_key = min_release_year or "all"
+    return f"tmdb:discover:v3:{media_type}:{genre_key}:{min_key}:{max_key}:{year_key}"
 
 
 def _find_streaming_candidate(media_type, candidates):
@@ -632,8 +636,17 @@ def _discovery_candidates(results):
     return candidates
 
 
-def _load_discovery_page(media_type, genre_id, min_rating, max_rating, filters):
-    cache_key = _discovery_cache_key(media_type, genre_id, min_rating, max_rating)
+def _load_discovery_page(
+    media_type,
+    genre_id,
+    min_rating,
+    max_rating,
+    filters,
+    min_release_year=None,
+):
+    cache_key = _discovery_cache_key(
+        media_type, genre_id, min_rating, max_rating, min_release_year
+    )
     first_page = cache.get(cache_key)
     if first_page is None:
         first_page = _get(f"/discover/{media_type}", page=1, **filters)
@@ -645,7 +658,7 @@ def _load_discovery_page(media_type, genre_id, min_rating, max_rating, filters):
         content_name = "séries" if media_type == "tv" else "filmes"
         raise TMDBError(
             f"Não encontrei {content_name} para esses filtros. "
-            "Diminua a nota ou tente outro gênero."
+            "Diminua a nota, escolha outro gênero ou altere o ano."
         )
 
     try:
@@ -662,12 +675,26 @@ def _load_discovery_page(media_type, genre_id, min_rating, max_rating, filters):
     return _discovery_candidates(page_data.get("results")) or first_results
 
 
-def get_random_title(media_type="movie", genre_id=None, min_rating=0, max_rating=10):
+def get_random_title(
+    media_type="movie",
+    genre_id=None,
+    min_rating=0,
+    max_rating=10,
+    min_release_year=None,
+):
     if media_type not in {"movie", "tv"}:
         media_type = "movie"
 
     min_rating = _normalise_rating(min_rating)
     max_rating = max(_normalise_rating(max_rating), min_rating)
+    if min_release_year is not None:
+        try:
+            min_release_year = int(min_release_year)
+        except (TypeError, ValueError, OverflowError):
+            min_release_year = MIN_RELEASE_YEAR
+        min_release_year = min(
+            max(min_release_year, MIN_RELEASE_YEAR), timezone.localdate().year
+        )
     if genre_id is not None:
         genre_value = str(genre_id).strip()
         if (
@@ -696,11 +723,20 @@ def get_random_title(media_type="movie", genre_id=None, min_rating=0, max_rating
     }
     if media_type == "movie":
         filters["include_video"] = "false"
+        if min_release_year is not None:
+            filters["primary_release_date.gte"] = f"{min_release_year}-01-01"
+    elif min_release_year is not None:
+        filters["first_air_date.gte"] = f"{min_release_year}-01-01"
     if genre_id:
         filters["with_genres"] = genre_id
 
     results = _load_discovery_page(
-        media_type, genre_id, min_rating, max_rating, filters
+        media_type,
+        genre_id,
+        min_rating,
+        max_rating,
+        filters,
+        min_release_year,
     )
     candidates = random.sample(
         results, k=min(MAX_STREAMING_CANDIDATES, len(results))
@@ -722,9 +758,15 @@ def get_random_title(media_type="movie", genre_id=None, min_rating=0, max_rating
     return _build_title_payload(data, media_type, provider_groups, streaming_error)
 
 
-def get_random_movie(genre_id=None, min_rating=0, max_rating=10):
-    return get_random_title("movie", genre_id, min_rating, max_rating)
+def get_random_movie(
+    genre_id=None, min_rating=0, max_rating=10, min_release_year=None
+):
+    return get_random_title(
+        "movie", genre_id, min_rating, max_rating, min_release_year
+    )
 
 
-def get_random_series(genre_id=None, min_rating=0, max_rating=10):
-    return get_random_title("tv", genre_id, min_rating, max_rating)
+def get_random_series(
+    genre_id=None, min_rating=0, max_rating=10, min_release_year=None
+):
+    return get_random_title("tv", genre_id, min_rating, max_rating, min_release_year)
