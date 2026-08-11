@@ -73,6 +73,7 @@ def seo_metadata(request):
         "canonical_url": f"{settings.SITE_URL}{request.path}",
         "seo_robots": "index, follow" if is_indexable else "noindex, follow",
         "google_site_verification": settings.GOOGLE_SITE_VERIFICATION,
+        "bing_site_verification": settings.BING_SITE_VERIFICATION,
         "seo_json_ld": (
             _homepage_json_ld()
             if is_indexable and url_name == "home"

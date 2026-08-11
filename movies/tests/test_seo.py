@@ -11,6 +11,7 @@ from movies.services.tmdb import TMDBError, TMDBNotFound
 
 CANONICAL_SITE = "https://qualfilmehoje.vercel.app"
 GOOGLE_VERIFICATION_TOKEN = "8J1E6sV8WN1zxIrmvUWlcKWKDZ8lurm1bycxUgO2ssc"
+BING_VERIFICATION_TOKEN = "BAADAFCE767CC2A73B3A5DEF51A06BC7"
 
 
 @override_settings(SITE_URL=CANONICAL_SITE)
@@ -21,6 +22,14 @@ class SEOEndpointsTests(TestCase):
         self.assertContains(
             response,
             f'<meta name="google-site-verification" content="{GOOGLE_VERIFICATION_TOKEN}">',
+        )
+
+    def test_home_exposes_bing_webmaster_verification(self):
+        response = self.client.get(reverse("movies:home"))
+
+        self.assertContains(
+            response,
+            f'<meta name="msvalidate.01" content="{BING_VERIFICATION_TOKEN}">',
         )
 
     def test_robots_allows_public_pages_and_references_sitemap(self):

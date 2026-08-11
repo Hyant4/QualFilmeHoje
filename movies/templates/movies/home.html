@@ -16,6 +16,7 @@
   {% endif %}
   <meta name="robots" content="{% if seo_noindex_override %}noindex, nofollow{% else %}{{ seo_robots }}{% endif %}">
   {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
+  {% if bing_site_verification %}<meta name="msvalidate.01" content="{{ bing_site_verification }}">{% endif %}
   <link rel="canonical" href="{{ canonical_url }}">
   <meta property="og:type" content="website">
   <meta property="og:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}">

@@ -84,6 +84,10 @@ GOOGLE_SITE_VERIFICATION = (
     os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
     or "8J1E6sV8WN1zxIrmvUWlcKWKDZ8lurm1bycxUgO2ssc"
 )
+BING_SITE_VERIFICATION = (
+    os.getenv("BING_SITE_VERIFICATION", "").strip()
+    or "BAADAFCE767CC2A73B3A5DEF51A06BC7"
+)
 
 # Cada Preview da Vercel recebe um hostname proprio. Aceitamos apenas os
 # hostnames exatos fornecidos pela plataforma, sem liberar o curinga amplo
