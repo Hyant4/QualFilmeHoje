@@ -1,7 +1,10 @@
 import json
 import logging
+import math
+import secrets
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlsplit, urlunsplit
 
 from django.conf import settings
 from django.contrib import messages
@@ -9,12 +12,13 @@ from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .forms import WhatsAppContactForm
 from .models import Favorite, Title, WhatsAppContact
+from .security import rate_limit
 from .services.library import (
     get_library,
     is_favorite,
@@ -40,8 +44,68 @@ from .services.whatsapp import (
 
 DEFAULT_MIN_RATING = 6.0
 DEFAULT_MAX_RATING = 10.0
+MAX_GENRE_ID = 999_999
+MAX_TMDB_ID = 2_147_483_647
+CSP_REPORT_MAX_BYTES = 16 * 1024
+WHATSAPP_WEBHOOK_MAX_BYTES = 256 * 1024
 WHATSAPP_INBOUND_CACHE_SECONDS = 24 * 60 * 60
 logger = logging.getLogger(__name__)
+
+
+def _sanitise_csp_report_value(key, value):
+    if not isinstance(value, str | int | float):
+        return ""
+    text = " ".join(str(value).split())[:1000]
+    if key.endswith("-uri") or key in {"documentURL", "blockedURL", "sourceFile"}:
+        parts = urlsplit(text)
+        if parts.scheme in {"http", "https"}:
+            text = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    return text
+
+
+@csrf_exempt
+@require_POST
+@rate_limit("csp-report", ip=(60, 300), methods={"POST"})
+def csp_report(request):
+    """Recebe relatorios sem cookies sensiveis, queries ou amostras de script."""
+
+    body = request.body
+    if len(body) > CSP_REPORT_MAX_BYTES:
+        return HttpResponse(status=413)
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return HttpResponse(status=400)
+
+    entries = payload if isinstance(payload, list) else [payload]
+    allowed_keys = {
+        "blocked-uri",
+        "blockedURL",
+        "column-number",
+        "columnNumber",
+        "disposition",
+        "document-uri",
+        "documentURL",
+        "effective-directive",
+        "line-number",
+        "lineNumber",
+        "source-file",
+        "sourceFile",
+        "status-code",
+        "violated-directive",
+    }
+    for entry in entries[:20]:
+        if not isinstance(entry, dict):
+            continue
+        report = entry.get("csp-report", entry.get("body", entry))
+        if not isinstance(report, dict):
+            continue
+        safe_report = {
+            key: _sanitise_csp_report_value(key, report[key])
+            for key in allowed_keys & report.keys()
+        }
+        logger.warning("CSP report-only violation: %s", safe_report)
+    return HttpResponse(status=204)
 
 
 def _safe_genres():
@@ -88,25 +152,40 @@ def _safe_landing_data():
     return genre_sets, genres_error, rows, row_errors
 
 
+def _parse_ascii_int(value, *, maximum):
+    value = str(value or "").strip()
+    if not value or len(value) > 10 or not value.isascii() or not value.isdecimal():
+        return None
+    parsed = int(value)
+    return parsed if 1 <= parsed <= maximum else None
+
+
+def _parse_rating(value, default):
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    if not math.isfinite(parsed):
+        return default
+    return round(min(max(parsed, 0.0), 10.0), 1)
+
+
 def _parse_filters(request):
     media_type = request.POST.get("media_type", "movie")
     if media_type not in {"movie", "tv"}:
         media_type = "movie"
 
-    genre_id = request.POST.get("genre_id", "").strip()
-    if genre_id and not genre_id.isdigit():
-        genre_id = ""
+    genre_value = request.POST.get("genre_id", "")
+    genre_number = _parse_ascii_int(genre_value, maximum=MAX_GENRE_ID)
+    genre_id = str(genre_number) if genre_number is not None else ""
 
-    try:
-        min_rating = float(request.POST.get("min_rating", DEFAULT_MIN_RATING))
-    except (TypeError, ValueError):
-        min_rating = DEFAULT_MIN_RATING
-    try:
-        max_rating = float(request.POST.get("max_rating", DEFAULT_MAX_RATING))
-    except (TypeError, ValueError):
-        max_rating = DEFAULT_MAX_RATING
-    min_rating = min(max(min_rating, 0.0), 10.0)
-    max_rating = min(max(max_rating, min_rating), 10.0)
+    min_rating = _parse_rating(
+        request.POST.get("min_rating", DEFAULT_MIN_RATING), DEFAULT_MIN_RATING
+    )
+    max_rating = _parse_rating(
+        request.POST.get("max_rating", DEFAULT_MAX_RATING), DEFAULT_MAX_RATING
+    )
+    max_rating = max(max_rating, min_rating)
     return media_type, genre_id, min_rating, max_rating
 
 
@@ -138,6 +217,11 @@ def _genre_name(genre_sets, media_type, genre_id):
     )
 
 
+@require_GET
+def privacy(request):
+    return render(request, "movies/privacy.html")
+
+
 def home(request):
     genre_sets, error, rows, row_errors = _safe_landing_data()
     context = {
@@ -161,6 +245,7 @@ def home(request):
 
 
 @require_POST
+@rate_limit("generate", ip=(30, 300), user=(20, 300), methods={"POST"})
 def generate_movie(request):
     media_type, genre_id, min_rating, max_rating = _parse_filters(request)
     genre_sets, genres_error = _safe_genres()
@@ -212,6 +297,7 @@ def generate_movie(request):
 
 
 @require_GET
+@rate_limit("title-detail", ip=(120, 300), user=(90, 300), methods={"GET"})
 def title_detail(request, media_type, tmdb_id):
     if media_type not in {Title.MOVIE, Title.TV}:
         return render(
@@ -231,9 +317,13 @@ def title_detail(request, media_type, tmdb_id):
     }
     try:
         movie = get_title_details(media_type, tmdb_id)
-        visitor_id = _visitor_id(request, create=True)
-        saved_title = save_title_snapshot(movie)
-        movie["can_favorite"] = saved_title is not None
+        visitor_id = _visitor_id(request)
+        saved_title = Title.objects.filter(
+            media_type=media_type,
+            tmdb_id=tmdb_id,
+        ).first()
+        # A persistencia, quando necessaria, ocorre apenas no POST de favorito.
+        movie["can_favorite"] = True
         movie["is_favorite"] = is_favorite(
             visitor_id,
             saved_title,
@@ -246,14 +336,29 @@ def title_detail(request, media_type, tmdb_id):
 
 
 @require_POST
+@rate_limit("favorite", ip=(60, 300), user=(40, 300), methods={"POST"})
 def toggle_title_favorite(request):
     media_type = request.POST.get("media_type", "")
-    tmdb_id = request.POST.get("tmdb_id", "")
-    if media_type not in {Title.MOVIE, Title.TV} or not tmdb_id.isdigit():
+    tmdb_id = _parse_ascii_int(
+        request.POST.get("tmdb_id", ""), maximum=MAX_TMDB_ID
+    )
+    if media_type not in {Title.MOVIE, Title.TV} or tmdb_id is None:
         return JsonResponse({"error": "Título inválido."}, status=400)
 
     visitor_id = _visitor_id(request, create=True)
-    title = get_object_or_404(Title, media_type=media_type, tmdb_id=int(tmdb_id))
+    title = Title.objects.filter(media_type=media_type, tmdb_id=tmdb_id).first()
+    if title is None:
+        try:
+            title_data = get_title_details(
+                media_type,
+                tmdb_id,
+                include_streaming=False,
+            )
+        except TMDBError as exc:
+            return JsonResponse({"error": str(exc)}, status=503)
+        title = save_title_snapshot(title_data)
+    if title is None:
+        return JsonResponse({"error": "Titulo invalido."}, status=400)
     favorited = toggle_favorite(visitor_id, title, user=request.user)
     return JsonResponse(
         {
@@ -336,18 +441,41 @@ def _incoming_messages(payload):
     if not isinstance(payload, dict) or payload.get("object") != "whatsapp_business_account":
         return []
     messages = []
-    for entry in payload.get("entry", []):
-        for change in entry.get("changes", []):
+    entries = payload.get("entry", [])
+    if not isinstance(entries, list):
+        return []
+    for entry in entries[:50]:
+        if not isinstance(entry, dict):
+            continue
+        changes = entry.get("changes", [])
+        if not isinstance(changes, list):
+            continue
+        for change in changes[:50]:
+            if not isinstance(change, dict):
+                continue
             value = change.get("value", {})
             if isinstance(value, dict):
-                messages.extend(value.get("messages", []))
-    return [message for message in messages if isinstance(message, dict)]
+                value_messages = value.get("messages", [])
+                if isinstance(value_messages, list):
+                    messages.extend(value_messages[:100])
+            if len(messages) >= 100:
+                return [
+                    message
+                    for message in messages[:100]
+                    if isinstance(message, dict)
+                ]
+    return [message for message in messages[:100] if isinstance(message, dict)]
 
 
 def _reply_to_whatsapp_message(message):
-    message_id = message.get("id")
+    message_id = str(message.get("id") or "")[:200]
     sender = str(message.get("from") or "").strip()
-    if not message_id or not sender.isdigit():
+    if (
+        not message_id
+        or not sender.isascii()
+        or not sender.isdigit()
+        or not 10 <= len(sender) <= 15
+    ):
         return
     cache_key = f"whatsapp:inbound:{message_id}"
     if not cache.add(cache_key, True, WHATSAPP_INBOUND_CACHE_SECONDS):
@@ -368,7 +496,12 @@ def _reply_to_whatsapp_message(message):
             contact.is_verified = True
             contact.save(update_fields=["is_verified", "updated_at"])
 
-        text = str(message.get("text", {}).get("body") or "").strip().casefold()
+        text_data = message.get("text")
+        text = (
+            str(text_data.get("body") or "")[:4096].strip().casefold()
+            if isinstance(text_data, dict)
+            else ""
+        )
         if text in {"favoritos", "favorito", "minha lista", "lista"}:
             response = _format_favorites(contact)
         else:
@@ -388,15 +521,32 @@ def whatsapp_webhook(request):
         mode = request.GET.get("hub.mode", "")
         token = request.GET.get("hub.verify_token", "")
         challenge = request.GET.get("hub.challenge", "")
-        if mode == "subscribe" and token and token == settings.WHATSAPP_VERIFY_TOKEN:
+        if (
+            mode == "subscribe"
+            and token
+            and secrets.compare_digest(token, settings.WHATSAPP_VERIFY_TOKEN)
+            and 1 <= len(challenge) <= 256
+            and all(character.isprintable() for character in challenge)
+        ):
             return HttpResponse(challenge, content_type="text/plain")
         return HttpResponseForbidden("Verificação do webhook recusada.")
 
+    try:
+        declared_length = int(request.META.get("CONTENT_LENGTH") or 0)
+    except (TypeError, ValueError):
+        return HttpResponse(status=400)
+    if declared_length < 0:
+        return HttpResponse(status=400)
+    if declared_length > WHATSAPP_WEBHOOK_MAX_BYTES:
+        return HttpResponse(status=413)
+    body = request.body
+    if len(body) > WHATSAPP_WEBHOOK_MAX_BYTES:
+        return HttpResponse(status=413)
     signature = request.headers.get("X-Hub-Signature-256", "")
-    if not webhook_signature_is_valid(request.body, signature):
+    if not webhook_signature_is_valid(body, signature):
         return HttpResponseForbidden("Assinatura inválida.")
     try:
-        payload = json.loads(request.body.decode("utf-8"))
+        payload = json.loads(body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):
         return HttpResponse("", status=400)
 

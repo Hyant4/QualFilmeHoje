@@ -4,14 +4,18 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from django.conf import settings
+
+from .http_client import ExternalResponseError, open_json
 
 logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT_SECONDS = 8
+MAX_RESPONSE_BYTES = 512 * 1024
 
 
 class WhatsAppError(Exception):
@@ -35,21 +39,31 @@ def send_text_message(recipient, body):
 
     if not settings.WHATSAPP_ACCESS_TOKEN or not settings.WHATSAPP_PHONE_NUMBER_ID:
         raise WhatsAppError("A API do WhatsApp ainda não foi configurada.")
-    if not recipient or not body:
+    recipient = str(recipient or "").lstrip("+")
+    if not re.fullmatch(r"[0-9]{10,15}", recipient) or not isinstance(body, str):
         raise WhatsAppError("A mensagem do WhatsApp está inválida.")
+    body = body.strip()[:4096]
+    if not body:
+        raise WhatsAppError("A mensagem do WhatsApp está inválida.")
+    api_version = settings.WHATSAPP_GRAPH_API_VERSION
+    phone_number_id = settings.WHATSAPP_PHONE_NUMBER_ID
+    if not re.fullmatch(r"v[0-9]{1,3}\.[0-9]{1,3}", api_version):
+        raise WhatsAppError("A versão da API do WhatsApp está inválida.")
+    if not re.fullmatch(r"[0-9]{5,30}", phone_number_id):
+        raise WhatsAppError("O identificador do WhatsApp está inválido.")
 
     url = (
         "https://graph.facebook.com/"
-        f"{settings.WHATSAPP_GRAPH_API_VERSION}/"
-        f"{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+        f"{api_version}/"
+        f"{phone_number_id}/messages"
     )
     payload = json.dumps(
         {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
-            "to": str(recipient).lstrip("+"),
+            "to": recipient,
             "type": "text",
-            "text": {"preview_url": False, "body": str(body)[:4096]},
+            "text": {"preview_url": False, "body": body},
         }
     ).encode("utf-8")
     request = Request(
@@ -64,13 +78,19 @@ def send_text_message(recipient, body):
         },
     )
     try:
-        with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            return json.load(response)
+        response = open_json(
+            request,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            max_bytes=MAX_RESPONSE_BYTES,
+        )
+        if not isinstance(response, dict):
+            raise ExternalResponseError("A Meta não retornou um objeto JSON.")
+        return response
     except HTTPError as error:
         logger.warning("A Meta recusou uma resposta do WhatsApp: HTTP %s", error.code)
         raise WhatsAppError("A Meta recusou a mensagem.") from error
     except (URLError, TimeoutError) as error:
         logger.warning("Não foi possível responder pelo WhatsApp: %s", error)
         raise WhatsAppError("A Meta não respondeu a tempo.") from error
-    except (json.JSONDecodeError, UnicodeDecodeError, TypeError) as error:
+    except (ExternalResponseError, TypeError) as error:
         raise WhatsAppError("A Meta devolveu uma resposta inválida.") from error

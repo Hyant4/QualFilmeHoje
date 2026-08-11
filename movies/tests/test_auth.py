@@ -5,9 +5,14 @@ from urllib.parse import urlparse
 
 from allauth.account.adapter import get_adapter
 from allauth.account.models import EmailAddress
+from allauth.account.signals import password_changed
+from allauth.mfa.adapter import get_adapter as get_mfa_adapter
+from allauth.mfa.models import Authenticator
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.models import Session
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from movies.models import Favorite, Generation, Title, WhatsAppContact
@@ -103,6 +108,23 @@ class AuthenticationTests(TestCase):
         self.assertTrue(email_address.verified)
         self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
 
+    def test_signup_rejects_short_common_and_numeric_passwords(self):
+        for index, password in enumerate(("Aa1!curta", "password1234", "123456789012")):
+            response = self.client.post(
+                reverse("account_signup"),
+                {
+                    "username": f"fraca_{index}",
+                    "email": f"fraca_{index}@example.com",
+                    "password1": password,
+                    "password2": password,
+                },
+            )
+
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(
+                get_user_model().objects.filter(email=f"fraca_{index}@example.com").exists()
+            )
+
     def test_password_recovery_changes_password_by_email_link(self):
         user = self.create_user("recuperar@example.com")
 
@@ -143,6 +165,41 @@ class AuthenticationTests(TestCase):
         user.refresh_from_db()
         self.assertTrue(user.check_password(new_password))
         self.assertFalse(user.check_password(self.password))
+
+    def test_password_change_invalidates_other_sessions_only(self):
+        user = self.create_user("sessoes@example.com")
+        current_browser = Client()
+        other_browser = Client()
+        current_browser.force_login(user)
+        other_browser.force_login(user)
+        current_key = current_browser.session.session_key
+        other_key = other_browser.session.session_key
+        request = current_browser.get(reverse("movies:privacy")).wsgi_request
+
+        password_changed.send(
+            sender=user.__class__,
+            request=request,
+            user=user,
+        )
+
+        self.assertTrue(Session.objects.filter(session_key=current_key).exists())
+        self.assertFalse(Session.objects.filter(session_key=other_key).exists())
+
+    def test_session_lifetime_and_privacy_page(self):
+        self.assertEqual(settings.SESSION_COOKIE_AGE, 12 * 60 * 60)
+        self.assertTrue(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
+        self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+        self.assertEqual(settings.SESSION_COOKIE_SAMESITE, "Lax")
+        self.assertFalse(settings.ACCOUNT_SESSION_REMEMBER)
+
+        response = self.client.get(reverse("movies:privacy"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cookies estritamente necessários")
+        self.assertContains(response, "Login com Google")
+        self.assertContains(response, "TMDB")
+        self.assertContains(response, "Watchmode")
+        self.assertContains(response, "Brevo")
 
     def test_google_profile_name_generates_unique_username(self):
         user = get_user_model()(
@@ -320,6 +377,40 @@ class AuthenticationTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("accounts.google.com", response["Location"])
         self.assertNotContains(login_page, "test-secret")
+
+    def test_admin_login_uses_allauth_and_requires_totp(self):
+        anonymous = self.client.get(
+            reverse("admin:login"),
+            {"next": reverse("admin:index")},
+        )
+        self.assertRedirects(
+            anonymous,
+            f"{reverse('account_login')}?next={reverse('admin:index')}",
+            fetch_redirect_response=False,
+        )
+
+        staff = self.create_user("admin@example.com", username="admin_seguro")
+        staff.is_staff = True
+        staff.is_superuser = True
+        staff.save(update_fields=["is_staff", "is_superuser"])
+        self.client.force_login(staff)
+
+        enrollment = self.client.get(reverse("admin:index"))
+        self.assertRedirects(
+            enrollment,
+            reverse("mfa_activate_totp"),
+            fetch_redirect_response=False,
+        )
+
+        authenticator = Authenticator.objects.create(
+            user=staff,
+            type=Authenticator.Type.TOTP,
+            data={},
+        )
+        allowed = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(allowed.status_code, 200)
+        self.assertFalse(get_mfa_adapter().can_delete_authenticator(authenticator))
 
     def test_whatsapp_number_is_optional_and_normalized_for_the_account(self):
         user = self.create_user()

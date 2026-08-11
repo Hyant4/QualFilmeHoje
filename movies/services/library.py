@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 
 from ..models import Favorite, Generation, Title
+from .urls import TMDB_IMAGE_HOSTS, safe_https_url
 
 HISTORY_DISPLAY_LIMIT = 8
 HISTORY_STORAGE_LIMIT = 50
@@ -25,6 +26,8 @@ def _parse_rating(value):
         rating = Decimal(str(value)).quantize(Decimal("0.1"))
     except (InvalidOperation, TypeError, ValueError):
         return None
+    if not rating.is_finite():
+        return None
     return rating if Decimal(0) <= rating <= Decimal(10) else None
 
 
@@ -35,8 +38,18 @@ def _account_user(user):
 def save_title_snapshot(title_data):
     """Cria ou atualiza o snapshot mínimo de um título vindo do TMDB."""
     try:
-        tmdb_id = int(title_data["id"])
+        raw_id = str(title_data["id"]).strip()
+        if (
+            not raw_id
+            or len(raw_id) > 10
+            or not raw_id.isascii()
+            or not raw_id.isdecimal()
+        ):
+            return None
+        tmdb_id = int(raw_id)
     except (KeyError, TypeError, ValueError):
+        return None
+    if not 1 <= tmdb_id <= 2_147_483_647:
         return None
 
     media_type = title_data.get("media_type", Title.MOVIE)
@@ -49,7 +62,9 @@ def save_title_snapshot(title_data):
         defaults={
             "name": str(title_data.get("title") or "Título sem nome")[:255],
             "original_name": str(title_data.get("original_title") or "")[:255],
-            "poster_url": str(title_data.get("poster_url") or "")[:500],
+            "poster_url": safe_https_url(
+                title_data.get("poster_url"), TMDB_IMAGE_HOSTS
+            ),
             "release_date": _parse_date(title_data.get("release_date")),
             "vote_average": _parse_rating(title_data.get("vote_average")),
         },
@@ -78,7 +93,14 @@ def record_generation(
         visitor_id=visitor_id,
         user=account_user,
         title=title,
-        genre_id=int(genre_id) if genre_id else None,
+        genre_id=(
+            int(genre_id)
+            if genre_id
+            and str(genre_id).isascii()
+            and str(genre_id).isdecimal()
+            and 1 <= int(genre_id) <= 2_147_483_647
+            else None
+        ),
         genre_name=(genre_name or "")[:100],
         min_rating=_parse_rating(min_rating) or Decimal(0),
     )
@@ -143,16 +165,13 @@ def toggle_favorite(visitor_id, title, *, user=None):
         if account_user
         else {"visitor_id": visitor_id, "user__isnull": True, "title": title}
     )
-    favorite = Favorite.objects.filter(**lookup).first()
-    if favorite:
+    favorite, created = Favorite.objects.get_or_create(
+        **lookup,
+        defaults={"visitor_id": visitor_id},
+    )
+    if not created:
         favorite.delete()
         return False
-
-    Favorite.objects.create(
-        visitor_id=visitor_id,
-        user=account_user,
-        title=title,
-    )
     return True
 
 

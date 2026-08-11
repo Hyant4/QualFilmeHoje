@@ -21,8 +21,6 @@
   <title>{% if is_detail_page and movie %}{{ movie.title }} — QualFilmeHoje{% else %}QualFilmeHoje — Sua próxima sessão{% endif %}</title>
   <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="image" href="{{ hero_image }}" type="image/webp">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
@@ -193,7 +191,7 @@
     {% if movie %}
       <section class="result-section" id="resultado" data-movie-result>
         {% if movie.backdrop_url %}
-          <div class="backdrop" style="background-image: url('{{ movie.backdrop_url }}')" aria-hidden="true"></div>
+          <div class="backdrop" aria-hidden="true"><img src="{{ movie.backdrop_url }}" alt=""></div>
         {% endif %}
         <div class="wrap result-wrap">
           <div class="result-heading">
@@ -631,7 +629,10 @@
         <a href="{% url 'movies:home' %}" class="brand-logo brand-logo-footer" aria-label="QualFilmeHoje — início">
           <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
         </a>
-        <a href="{% if is_detail_page %}#resultado{% else %}#gerador{% endif %}" class="text-link">Voltar ao topo ↑</a>
+        <div class="footer-links">
+          <a href="{% url 'movies:privacy' %}" class="text-link">Privacidade</a>
+          <a href="{% if is_detail_page %}#resultado{% else %}#gerador{% endif %}" class="text-link">Voltar ao topo ↑</a>
+        </div>
       </div>
       <div class="credits">
         <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>

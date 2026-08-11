@@ -9,8 +9,6 @@
   <title>{% block head_title %}Conta{% endblock %} — QualFilmeHoje</title>
   <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
 </head>
@@ -50,6 +48,9 @@
       </div>
     </div>
   </main>
+  <footer class="auth-legal">
+    <a href="{% url 'movies:privacy' %}">Privacidade e cookies necessários</a>
+  </footer>
   {% block extra_body %}{% endblock %}
 </body>
 </html>

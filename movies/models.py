@@ -128,6 +128,22 @@ class Favorite(models.Model):
         return str(self.title)
 
 
+class SharedCacheEntry(models.Model):
+    """Tabela gerenciada usada pelo DatabaseCache nas funcoes da Vercel."""
+
+    cache_key = models.CharField(max_length=255, primary_key=True)
+    value = models.TextField()
+    expires = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "qualfilmehoje_cache"
+        verbose_name = "entrada de cache"
+        verbose_name_plural = "entradas de cache"
+
+    def __str__(self):
+        return self.cache_key
+
+
 class WhatsAppContact(models.Model):
     """Número opcional usado exclusivamente para conectar a conta ao bot."""
 

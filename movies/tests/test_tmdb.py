@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.core.cache import cache
 from django.test import SimpleTestCase
+from django.utils import timezone
 
 from movies.services.tmdb import (
     TMDBError,
@@ -110,7 +111,7 @@ class TMDBServiceTests(SimpleTestCase):
 
     @patch("movies.services.tmdb._get")
     def test_upcoming_movies_only_include_future_releases_in_date_order(self, mock_get):
-        today = date.today()
+        today = timezone.localdate()
         near_release = today + timedelta(days=4)
         later_release = today + timedelta(days=18)
         mock_get.return_value = {

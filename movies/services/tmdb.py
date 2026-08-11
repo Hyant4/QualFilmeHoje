@@ -4,18 +4,22 @@ Todas as chamadas são feitas no servidor para que o token nunca chegue ao
 navegador do visitante.
 """
 
-import json
+import math
 import os
 import random
+import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from functools import lru_cache
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from django.core.cache import cache
+from django.utils import timezone
 
+from .http_client import ExternalResponseError, open_json
+from .urls import TMDB_REVIEW_HOSTS, safe_https_url
 from .watchmode import WatchmodeError, get_streaming_groups
 
 API_BASE_URL = "https://api.themoviedb.org/3"
@@ -23,15 +27,21 @@ POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500"
 BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/w1280"
 DISCOVERY_CACHE_SECONDS = 10 * 60
 TITLE_CACHE_SECONDS = 12 * 60 * 60
+TITLE_NOT_FOUND_CACHE_SECONDS = 30 * 60
 TRENDS_CACHE_SECONDS = 30 * 60
 RELEASE_LISTS_CACHE_SECONDS = 30 * 60
 RECENT_RELEASE_DAYS = 30
 TRENDS_MIN_VOTES = 20
 MAX_STREAMING_CANDIDATES = 2
+MAX_TMDB_ID = 2_147_483_647
 
 
 class TMDBError(Exception):
     """Erro de integração exibível para o usuário final."""
+
+
+class TMDBNotFound(TMDBError):
+    """O ID foi validado, mas nao existe no catalogo do TMDB."""
 
 
 def _get(path, **params):
@@ -50,9 +60,13 @@ def _get(path, **params):
     )
 
     try:
-        with urlopen(request, timeout=10) as response:
-            return json.load(response)
+        payload = open_json(request, timeout=10)
+        if not isinstance(payload, dict):
+            raise ExternalResponseError("O TMDB nao retornou um objeto JSON.")
+        return payload
     except HTTPError as error:
+        if error.code == 404:
+            raise TMDBNotFound("O titulo nao foi encontrado no TMDB.") from error
         if error.code == 401:
             message = "O token do TMDB não é válido. Confira o arquivo .env."
         elif error.code == 429:
@@ -62,7 +76,7 @@ def _get(path, **params):
         raise TMDBError(message) from error
     except (URLError, TimeoutError) as error:
         raise TMDBError("O TMDB demorou para responder. Tente novamente.") from error
-    except (json.JSONDecodeError, UnicodeDecodeError, TypeError) as error:
+    except (ExternalResponseError, TypeError) as error:
         raise TMDBError("O TMDB devolveu uma resposta inesperada.") from error
 
 
@@ -70,7 +84,16 @@ def _get(path, **params):
 def get_genres(media_type="movie"):
     if media_type not in {"movie", "tv"}:
         media_type = "movie"
-    return _get(f"/genre/{media_type}/list", language="pt-BR").get("genres", [])
+    raw_genres = _get(f"/genre/{media_type}/list", language="pt-BR").get("genres")
+    genres = []
+    for genre in _as_list(raw_genres):
+        if not isinstance(genre, dict):
+            continue
+        genre_id = _safe_nonnegative_int(genre.get("id"), maximum=MAX_TMDB_ID)
+        name = _safe_text(genre.get("name"), maximum=100)
+        if genre_id and name:
+            genres.append({"id": genre_id, "name": name})
+    return genres
 
 
 def _normalise_rating(value):
@@ -78,11 +101,66 @@ def _normalise_rating(value):
         rating = float(value)
     except (TypeError, ValueError):
         return 0.0
+    if not math.isfinite(rating):
+        return 0.0
     return min(max(rating, 0.0), 10.0)
 
 
+def _validate_title_id(value):
+    value = str(value or "").strip()
+    if not value or len(value) > 10 or not value.isascii() or not value.isdecimal():
+        raise TMDBError("Titulo invalido.")
+    title_id = int(value)
+    if not 1 <= title_id <= MAX_TMDB_ID:
+        raise TMDBError("Titulo invalido.")
+    return title_id
+
+
+def _as_dict(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value):
+    return value if isinstance(value, list) else []
+
+
+def _safe_text(value, *, maximum):
+    return str(value)[:maximum] if isinstance(value, str | int | float) else ""
+
+
+def _tmdb_image_url(base_url, path):
+    if not isinstance(path, str) or not re.fullmatch(r"/[A-Za-z0-9._/-]{1,250}", path):
+        return ""
+    return f"{base_url}{path}"
+
+
+def _safe_nonnegative_int(value, *, maximum=2_147_483_647):
+    if isinstance(value, bool):
+        return 0
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return parsed if 0 <= parsed <= maximum else 0
+
+
+def _safe_date(value):
+    value = _safe_text(value, maximum=10)
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError:
+        return ""
+
+
 def _choose_trailer(videos):
-    youtube_videos = [video for video in videos if video.get("site") == "YouTube" and video.get("key")]
+    youtube_videos = []
+    for video in _as_list(videos):
+        if not isinstance(video, dict) or video.get("site") != "YouTube":
+            continue
+        key = video.get("key")
+        if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", key):
+            continue
+        youtube_videos.append(video)
     if not youtube_videos:
         return None
 
@@ -95,7 +173,7 @@ def _choose_trailer(videos):
             video.get("size", 0),
         )
 
-    trailer = max(youtube_videos, key=score)
+    trailer = dict(max(youtube_videos, key=score))
     trailer["embed_url"] = f"https://www.youtube-nocookie.com/embed/{trailer['key']}"
     trailer["youtube_url"] = f"https://www.youtube.com/watch?v={trailer['key']}"
     return trailer
@@ -103,16 +181,20 @@ def _choose_trailer(videos):
 
 def _normalise_reviews(reviews):
     normalised = []
-    for review in reviews[:6]:
-        author_details = review.get("author_details") or {}
+    for review in _as_list(reviews)[:6]:
+        if not isinstance(review, dict):
+            continue
+        author_details = _as_dict(review.get("author_details"))
+        rating = _normalise_rating(author_details.get("rating"))
         normalised.append(
             {
-                "id": review.get("id"),
-                "author": review.get("author") or "Usuário do TMDB",
-                "rating": author_details.get("rating"),
-                "content": review.get("content") or "",
-                "created_at": review.get("created_at"),
-                "url": review.get("url"),
+                "id": _safe_text(review.get("id"), maximum=100),
+                "author": _safe_text(review.get("author"), maximum=120)
+                or "Usuário do TMDB",
+                "rating": rating,
+                "content": _safe_text(review.get("content"), maximum=5000),
+                "created_at": _safe_text(review.get("created_at"), maximum=40),
+                "url": safe_https_url(review.get("url"), TMDB_REVIEW_HOSTS),
             }
         )
     return normalised
@@ -121,8 +203,10 @@ def _normalise_reviews(reviews):
 def _person_names(people, limit=None):
     names = []
     seen = set()
-    for person in people:
-        name = person.get("name")
+    for person in _as_list(people):
+        if not isinstance(person, dict):
+            continue
+        name = _safe_text(person.get("name"), maximum=120)
         if not name or name in seen:
             continue
         seen.add(name)
@@ -133,15 +217,23 @@ def _person_names(people, limit=None):
 
 
 def _crew_jobs(person):
-    jobs = {person.get("job")}
-    jobs.update(job.get("job") for job in person.get("jobs", []))
-    return jobs
+    if not isinstance(person, dict):
+        return set()
+    jobs = {_safe_text(person.get("job"), maximum=60)}
+    jobs.update(
+        _safe_text(job.get("job"), maximum=60)
+        for job in _as_list(person.get("jobs"))
+        if isinstance(job, dict)
+    )
+    return {job for job in jobs if job}
 
 
 def _normalise_credits(credits, details, media_type):
-    crew = credits.get("crew", [])
+    credits = _as_dict(credits)
+    details = _as_dict(details)
+    crew = [person for person in _as_list(credits.get("crew")) if isinstance(person, dict)]
     cast = sorted(
-        credits.get("cast", []),
+        [person for person in _as_list(credits.get("cast")) if isinstance(person, dict)],
         key=lambda person: (
             person.get("order") if isinstance(person.get("order"), int) else 9999
         ),
@@ -172,22 +264,32 @@ def _normalise_credits(credits, details, media_type):
 
 
 def _fetch_title_extras(title_id, media_type):
+    title_id = _validate_title_id(title_id)
     cache_key = f"tmdb:title-extras:v2:{media_type}:{title_id}"
+    missing_cache_key = f"tmdb:title-missing:v1:{media_type}:{title_id}"
+    if cache.get(missing_cache_key):
+        raise TMDBNotFound("O titulo nao foi encontrado no TMDB.")
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
     credits_key = "aggregate_credits" if media_type == "tv" else "credits"
-    details = _get(
-        f"/{media_type}/{title_id}",
-        language="pt-BR",
-        append_to_response=f"videos,reviews,{credits_key}",
-    )
+    try:
+        details = _get(
+            f"/{media_type}/{title_id}",
+            language="pt-BR",
+            append_to_response=f"videos,reviews,{credits_key}",
+        )
+    except TMDBNotFound:
+        cache.set(missing_cache_key, True, TITLE_NOT_FOUND_CACHE_SECONDS)
+        raise
+    if _validate_title_id(details.get("id")) != title_id:
+        raise TMDBError("O TMDB devolveu um titulo diferente do solicitado.")
     data = {
         "details": details,
-        "videos": details.get("videos") or {},
-        "reviews": details.get("reviews") or {},
-        "credits": details.get(credits_key) or {},
+        "videos": _as_dict(details.get("videos")),
+        "reviews": _as_dict(details.get("reviews")),
+        "credits": _as_dict(details.get(credits_key)),
     }
 
     fallback_requests = {}
@@ -209,7 +311,7 @@ def _fetch_title_extras(title_id, media_type):
                 for name, (path, params) in fallback_requests.items()
             }
             for name, future in futures.items():
-                data[name] = future.result()
+                data[name] = _as_dict(future.result())
 
     cache.set(cache_key, data, TITLE_CACHE_SECONDS)
     return data
@@ -218,58 +320,85 @@ def _fetch_title_extras(title_id, media_type):
 def _build_title_payload(data, media_type, provider_groups=None, streaming_error=None):
     """Converte a resposta detalhada do TMDB no formato usado pelas telas."""
 
-    title = dict(data["details"])
-    title["media_type"] = media_type
-    title["media_label"] = "Série" if media_type == "tv" else "Filme"
-    title["title"] = title.get("name") if media_type == "tv" else title.get("title")
-    title["original_title"] = (
-        title.get("original_name") if media_type == "tv" else title.get("original_title")
-    )
-    title["release_date"] = (
-        title.get("first_air_date") if media_type == "tv" else title.get("release_date")
-    )
-    if media_type == "tv":
-        runtimes = title.get("episode_run_time") or []
-        title["runtime"] = runtimes[0] if runtimes else None
+    data = _as_dict(data)
+    details = _as_dict(data.get("details"))
+    title_id = _validate_title_id(details.get("id"))
+    name_field = "name" if media_type == "tv" else "title"
+    original_field = "original_name" if media_type == "tv" else "original_title"
+    date_field = "first_air_date" if media_type == "tv" else "release_date"
+    genres = []
+    for genre in _as_list(details.get("genres"))[:20]:
+        if not isinstance(genre, dict):
+            continue
+        genre_name = _safe_text(genre.get("name"), maximum=100)
+        if genre_name:
+            genres.append(
+                {
+                    "id": _safe_nonnegative_int(
+                        genre.get("id"), maximum=MAX_TMDB_ID
+                    ),
+                    "name": genre_name,
+                }
+            )
 
-    title["poster_url"] = (
-        f"{POSTER_BASE_URL}{title['poster_path']}" if title.get("poster_path") else ""
+    title = {
+        "id": title_id,
+        "media_type": media_type,
+        "media_label": "Série" if media_type == "tv" else "Filme",
+        "title": _safe_text(details.get(name_field), maximum=255)
+        or "Título sem nome",
+        "original_title": _safe_text(details.get(original_field), maximum=255),
+        "release_date": _safe_date(details.get(date_field)),
+        "vote_average": _normalise_rating(details.get("vote_average")),
+        "vote_count": _safe_nonnegative_int(details.get("vote_count")),
+        "overview": _safe_text(details.get("overview"), maximum=5000),
+        "tagline": _safe_text(details.get("tagline"), maximum=500),
+        "genres": genres,
+        "number_of_seasons": _safe_nonnegative_int(
+            details.get("number_of_seasons"), maximum=1000
+        ),
+    }
+    if media_type == "tv":
+        runtimes = _as_list(details.get("episode_run_time"))
+        runtime = runtimes[0] if runtimes else None
+    else:
+        runtime = details.get("runtime")
+    runtime = _safe_nonnegative_int(runtime, maximum=24 * 60)
+    title["runtime"] = runtime or None
+
+    title["poster_url"] = _tmdb_image_url(
+        POSTER_BASE_URL, details.get("poster_path")
     )
-    title["backdrop_url"] = (
-        f"{BACKDROP_BASE_URL}{title['backdrop_path']}"
-        if title.get("backdrop_path")
-        else ""
+    title["backdrop_url"] = _tmdb_image_url(
+        BACKDROP_BASE_URL, details.get("backdrop_path")
     )
-    title["provider_groups"] = provider_groups or []
+    title["provider_groups"] = _as_list(provider_groups)
     if streaming_error:
-        title["streaming_error"] = streaming_error
-    title["trailer"] = _choose_trailer(data["videos"].get("results", []))
-    title["reviews"] = _normalise_reviews(data["reviews"].get("results", []))
+        title["streaming_error"] = _safe_text(streaming_error, maximum=300)
+    videos = _as_dict(data.get("videos"))
+    reviews = _as_dict(data.get("reviews"))
+    title["trailer"] = _choose_trailer(videos.get("results"))
+    title["reviews"] = _normalise_reviews(reviews.get("results"))
     title["credit_sections"] = _normalise_credits(
-        data["credits"], title, media_type
+        data.get("credits"), details, media_type
     )
     return title
 
 
-def get_title_details(media_type, title_id):
+def get_title_details(media_type, title_id, *, include_streaming=True):
     """Busca a ficha completa de um filme ou série pelo ID do TMDB."""
 
     if media_type not in {"movie", "tv"}:
         raise TMDBError("Tipo de título inválido.")
-    try:
-        title_id = int(title_id)
-    except (TypeError, ValueError) as error:
-        raise TMDBError("Título inválido.") from error
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        details_future = executor.submit(_fetch_title_extras, title_id, media_type)
-        streaming_future = executor.submit(get_streaming_groups, media_type, title_id)
-        data = details_future.result()
+    title_id = _validate_title_id(title_id)
+    data = _fetch_title_extras(title_id, media_type)
+    provider_groups = []
+    streaming_error = None
+    if include_streaming:
         try:
-            provider_groups = streaming_future.result()
-            streaming_error = None
+            # O Watchmode so recebe IDs que o TMDB acabou de validar.
+            provider_groups = get_streaming_groups(media_type, title_id)
         except WatchmodeError as error:
-            provider_groups = []
             streaming_error = str(error)
     return _build_title_payload(data, media_type, provider_groups, streaming_error)
 
@@ -281,7 +410,7 @@ def _get_recent_top_titles(media_type, limit=10):
         raise TMDBError("Tipo de título inválido.")
 
     limit = min(max(int(limit), 1), 20)
-    today = date.today()
+    today = timezone.localdate()
     cutoff = today - timedelta(days=RECENT_RELEASE_DAYS)
     cache_key = f"tmdb:recent-top:v5:{media_type}:{today.isoformat()}:{limit}"
     cached = cache.get(cache_key)
@@ -304,7 +433,7 @@ def _get_recent_top_titles(media_type, limit=10):
 
     data = _get(f"/discover/{media_type}", **filters)
     ranked_results = sorted(
-        data.get("results", []),
+        [item for item in _as_list(data.get("results")) if isinstance(item, dict)],
         key=lambda item: (
             _normalise_rating(item.get("vote_average")),
             item.get("vote_count") or 0,
@@ -313,33 +442,38 @@ def _get_recent_top_titles(media_type, limit=10):
     )
     titles = []
     for item in ranked_results:
-        title = item.get("title") if media_type == "movie" else item.get("name")
-        if not item.get("id") or not title:
+        try:
+            item_id = _validate_title_id(item.get("id"))
+        except TMDBError:
+            continue
+        title = _safe_text(
+            item.get("title") if media_type == "movie" else item.get("name"),
+            maximum=255,
+        )
+        if not title:
             continue
         titles.append(
             {
-                "id": item["id"],
+                "id": item_id,
                 "media_type": media_type,
                 "title": title,
                 "original_title": (
-                    item.get("original_title")
+                    _safe_text(item.get("original_title"), maximum=255)
                     if media_type == "movie"
-                    else item.get("original_name")
+                    else _safe_text(item.get("original_name"), maximum=255)
                 )
                 or "",
-                "overview": item.get("overview") or "",
+                "overview": _safe_text(item.get("overview"), maximum=5000),
                 "release_date": (
-                    item.get("release_date")
+                    _safe_date(item.get("release_date"))
                     if media_type == "movie"
-                    else item.get("first_air_date")
+                    else _safe_date(item.get("first_air_date"))
                 )
                 or "",
                 "vote_average": _normalise_rating(item.get("vote_average")),
-                "vote_count": item.get("vote_count") or 0,
-                "poster_url": (
-                    f"{POSTER_BASE_URL}{item['poster_path']}"
-                    if item.get("poster_path")
-                    else ""
+                "vote_count": _safe_nonnegative_int(item.get("vote_count")),
+                "poster_url": _tmdb_image_url(
+                    POSTER_BASE_URL, item.get("poster_path")
                 ),
             }
         )
@@ -359,11 +493,17 @@ def get_recent_top_series(limit=10):
 
 
 def _normalise_release_list_item(item, availability_kind):
-    title = item.get("title")
-    if not item.get("id") or not title:
+    if not isinstance(item, dict):
+        return None
+    try:
+        item_id = _validate_title_id(item.get("id"))
+    except TMDBError:
+        return None
+    title = _safe_text(item.get("title"), maximum=255)
+    if not title:
         return None
 
-    release_date = item.get("release_date") or ""
+    release_date = _safe_date(item.get("release_date"))
     try:
         parsed_release_date = date.fromisoformat(release_date)
     except (TypeError, ValueError):
@@ -379,20 +519,16 @@ def _normalise_release_list_item(item, availability_kind):
         )
 
     return {
-        "id": item["id"],
+        "id": item_id,
         "media_type": "movie",
         "title": title,
-        "original_title": item.get("original_title") or "",
-        "overview": item.get("overview") or "",
+        "original_title": _safe_text(item.get("original_title"), maximum=255),
+        "overview": _safe_text(item.get("overview"), maximum=5000),
         "release_date": release_date,
         "release_date_value": parsed_release_date,
         "vote_average": _normalise_rating(item.get("vote_average")),
-        "vote_count": item.get("vote_count") or 0,
-        "poster_url": (
-            f"{POSTER_BASE_URL}{item['poster_path']}"
-            if item.get("poster_path")
-            else ""
-        ),
+        "vote_count": _safe_nonnegative_int(item.get("vote_count")),
+        "poster_url": _tmdb_image_url(POSTER_BASE_URL, item.get("poster_path")),
         "availability_kind": availability_kind,
         "availability_label": availability_label,
     }
@@ -405,7 +541,7 @@ def _get_movie_release_list(list_name, limit=10):
         raise TMDBError("Lista de lançamentos inválida.")
 
     limit = min(max(int(limit), 1), 20)
-    today = date.today()
+    today = timezone.localdate()
     cache_key = f"tmdb:movie-releases:v1:{list_name}:BR:{today.isoformat()}:{limit}"
     cached = cache.get(cache_key)
     if cached is not None:
@@ -420,7 +556,7 @@ def _get_movie_release_list(list_name, limit=10):
     availability_kind = "cinema" if list_name == "now_playing" else "upcoming"
     titles = []
     seen_ids = set()
-    for item in data.get("results", []):
+    for item in _as_list(data.get("results")):
         normalised = _normalise_release_list_item(item, availability_kind)
         if not normalised or normalised["id"] in seen_ids:
             continue
@@ -468,14 +604,32 @@ def _discovery_cache_key(media_type, genre_id, min_rating, max_rating):
 def _find_streaming_candidate(media_type, candidates):
     streaming_error = None
     for candidate in candidates[:MAX_STREAMING_CANDIDATES]:
+        if not isinstance(candidate, dict):
+            continue
         try:
-            groups = get_streaming_groups(media_type, candidate["id"])
+            title_id = _validate_title_id(candidate.get("id"))
+            groups = get_streaming_groups(media_type, title_id)
         except WatchmodeError as error:
             streaming_error = str(error)
             break
+        except TMDBError:
+            continue
         if groups:
-            return candidate["id"], groups, None
-    return candidates[0]["id"], [], streaming_error
+            return title_id, groups, None
+    return _validate_title_id(candidates[0]["id"]), [], streaming_error
+
+
+def _discovery_candidates(results):
+    candidates = []
+    for item in _as_list(results):
+        if not isinstance(item, dict):
+            continue
+        try:
+            title_id = _validate_title_id(item.get("id"))
+        except TMDBError:
+            continue
+        candidates.append({"id": title_id})
+    return candidates
 
 
 def _load_discovery_page(media_type, genre_id, min_rating, max_rating, filters):
@@ -485,8 +639,8 @@ def _load_discovery_page(media_type, genre_id, min_rating, max_rating, filters):
         first_page = _get(f"/discover/{media_type}", page=1, **filters)
         cache.set(cache_key, first_page, DISCOVERY_CACHE_SECONDS)
 
-    total_results = first_page.get("total_results", 0)
-    first_results = first_page.get("results", [])
+    total_results = _safe_nonnegative_int(first_page.get("total_results"))
+    first_results = _discovery_candidates(first_page.get("results"))
     if not total_results or not first_results:
         content_name = "séries" if media_type == "tv" else "filmes"
         raise TMDBError(
@@ -494,14 +648,18 @@ def _load_discovery_page(media_type, genre_id, min_rating, max_rating, filters):
             "Diminua a nota ou tente outro gênero."
         )
 
-    total_pages = min(max(int(first_page.get("total_pages", 1)), 1), 500)
+    try:
+        total_pages = int(first_page.get("total_pages", 1))
+    except (TypeError, ValueError, OverflowError):
+        total_pages = 1
+    total_pages = min(max(total_pages, 1), 500)
     if total_pages == 1:
         return first_results
 
     page_data = _get(
         f"/discover/{media_type}", page=random.randint(1, total_pages), **filters
     )
-    return page_data.get("results") or first_results
+    return _discovery_candidates(page_data.get("results")) or first_results
 
 
 def get_random_title(media_type="movie", genre_id=None, min_rating=0, max_rating=10):
@@ -510,6 +668,22 @@ def get_random_title(media_type="movie", genre_id=None, min_rating=0, max_rating
 
     min_rating = _normalise_rating(min_rating)
     max_rating = max(_normalise_rating(max_rating), min_rating)
+    if genre_id is not None:
+        genre_value = str(genre_id).strip()
+        if (
+            not genre_value
+            or len(genre_value) > 10
+            or not genre_value.isascii()
+            or not genre_value.isdecimal()
+        ):
+            genre_id = None
+        else:
+            parsed_genre_id = int(genre_value)
+            genre_id = (
+                str(parsed_genre_id)
+                if 1 <= parsed_genre_id <= MAX_TMDB_ID
+                else None
+            )
     filters = {
         "language": "pt-BR",
         "include_adult": "false",

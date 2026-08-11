@@ -156,7 +156,8 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
 .detail-empty p:not(.eyebrow) { margin: 0; color: var(--muted); }
 
 .result-section { position: relative; overflow: hidden; padding: 72px 0 84px; border-bottom: 1px solid var(--line); }
-.backdrop { position: absolute; inset: 0 0 auto 0; height: 540px; background-position: center 18%; background-size: cover; opacity: 0.2; filter: saturate(0.65); }
+.backdrop { position: absolute; inset: 0 0 auto 0; height: 540px; overflow: hidden; opacity: 0.2; filter: saturate(0.65); }
+.backdrop img { width: 100%; height: 100%; object-fit: cover; object-position: center 18%; }
 .backdrop::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(14, 10, 10, 0.12), var(--bg) 93%), linear-gradient(to right, var(--bg), transparent 45%, var(--bg)); }
 .result-wrap { position: relative; }
 .result-heading { min-height: 210px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 30px; }
@@ -269,12 +270,30 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
 
 .site-footer { padding: 38px 0; border-top: 1px solid var(--line); }
 .footer-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.footer-links { display: flex; align-items: center; gap: 18px; }
 .credits { display: flex; justify-content: space-between; gap: 24px; margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(232, 185, 76, 0.08); color: #756164; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; }
 .credits p { margin: 0; }
 .credits a { color: #a98a48; }
 
 .auth-page { min-height: 100vh; background: radial-gradient(circle at 14% 22%, rgba(92, 27, 34, 0.27), transparent 38%), var(--bg); }
+.auth-legal { padding: 18px 24px 28px; color: var(--muted); font-size: 0.72rem; text-align: center; }
+.auth-legal a { color: var(--gold); text-decoration: none; }
 .auth-main { min-height: calc(100vh - 73px); display: grid; align-items: center; padding: 56px 0 72px; }
+
+.privacy-page { min-height: 100vh; background: radial-gradient(circle at 82% 8%, rgba(92, 27, 34, 0.22), transparent 34%), var(--bg); }
+.privacy-main { padding: 68px 0 88px; }
+.privacy-document { max-width: 900px; }
+.privacy-heading { padding-bottom: 34px; border-bottom: 1px solid var(--line); }
+.privacy-heading h1 { margin: 12px 0 18px; font-size: clamp(3.4rem, 9vw, 6.8rem); font-weight: 600; letter-spacing: -0.03em; line-height: 0.92; text-transform: uppercase; }
+.privacy-heading > p:not(.eyebrow) { max-width: 700px; margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.75; }
+.privacy-heading small { display: block; margin-top: 18px; color: #756164; font-size: 0.62rem; }
+.privacy-document > section { padding: 30px 0; border-bottom: 1px solid var(--line); }
+.privacy-document h2 { margin: 0 0 14px; color: var(--cream); font-size: 1.25rem; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; }
+.privacy-document section p, .privacy-document li { color: #cbbdb2; font-size: 0.9rem; line-height: 1.75; }
+.privacy-document section p { margin: 10px 0 0; }
+.privacy-document ul { display: grid; gap: 8px; margin: 10px 0 0; padding-left: 20px; }
+.privacy-document strong, .privacy-document code { color: var(--gold-soft); }
+.privacy-document code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; }
 .auth-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 470px); align-items: center; gap: clamp(54px, 9vw, 130px); }
 .auth-intro { max-width: 520px; }
 .auth-intro h1 { margin: 16px 0 26px; font-size: clamp(4rem, 7.5vw, 7rem); font-weight: 600; letter-spacing: -0.035em; line-height: 0.86; text-transform: uppercase; }
@@ -384,7 +403,8 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
   .alert-close { width: 36px; height: 36px; }
   .alert p { font-size: 0.78rem; }
   .result-section { padding: 48px 0 62px; }
-  .backdrop { height: 430px; background-position: center top; }
+  .backdrop { height: 430px; }
+  .backdrop img { object-position: center top; }
   .result-heading { min-height: 0; display: grid; align-items: start; gap: 18px; padding-bottom: 22px; }
   .result-heading h2 { max-width: 100%; margin-top: 8px; font-size: clamp(2.45rem, 13vw, 3.8rem); line-height: 0.96; overflow-wrap: anywhere; text-wrap: balance; }
   .result-title-block { max-width: 100%; }

@@ -4,25 +4,77 @@ from pathlib import Path
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.csp import CSP
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 IS_TESTING = "test" in sys.argv
-DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
+VERCEL_ENV = os.getenv("VERCEL_ENV", "").strip().lower()
+IS_VERCEL = os.getenv("VERCEL", "").strip() == "1" or bool(VERCEL_ENV)
+DJANGO_ENV = os.getenv(
+    "DJANGO_ENV", "production" if IS_VERCEL else "development"
+).strip().lower()
+if DJANGO_ENV not in {"development", "test", "preview", "production"}:
+    raise ImproperlyConfigured(
+        "DJANGO_ENV deve ser development, test, preview ou production."
+    )
+
+IS_PRODUCTION = DJANGO_ENV == "production"
+IS_DEPLOYED = IS_VERCEL or DJANGO_ENV in {"preview", "production"}
+DEBUG = os.getenv("DJANGO_DEBUG", "False").strip().lower() == "true"
+if IS_DEPLOYED and DEBUG:
+    raise ImproperlyConfigured(
+        "DJANGO_DEBUG deve ser False fora do desenvolvimento local."
+    )
+
+
+def _secret_is_strong(value):
+    insecure_markers = {
+        "insegura-apenas-para-desenvolvimento",
+        "troque-por-uma-chave-segura",
+        "change-me",
+        "changeme",
+    }
+    return (
+        len(value) >= 50
+        and len(set(value)) >= 12
+        and value.casefold() not in insecure_markers
+    )
+
+
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "").strip()
+if IS_DEPLOYED and not _secret_is_strong(SECRET_KEY):
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY deve existir, ter ao menos 50 caracteres e ser exclusiva."
+    )
 if not SECRET_KEY:
-    if DEBUG or IS_TESTING:
+    if DEBUG or IS_TESTING or DJANGO_ENV == "test":
         SECRET_KEY = "insegura-apenas-para-desenvolvimento"
     else:
-        raise ImproperlyConfigured("Configure a variável DJANGO_SECRET_KEY.")
+        raise ImproperlyConfigured("Configure a variavel DJANGO_SECRET_KEY.")
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
     if host.strip()
 ]
+
+# Cada Preview da Vercel recebe um hostname proprio. Aceitamos apenas os
+# hostnames exatos fornecidos pela plataforma, sem liberar o curinga amplo
+# ``.vercel.app``.
+for vercel_host_variable in (
+    "VERCEL_URL",
+    "VERCEL_BRANCH_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+):
+    vercel_host = os.getenv(vercel_host_variable, "").strip()
+    if vercel_host:
+        vercel_host = vercel_host.removeprefix("https://").removeprefix("http://")
+        vercel_host = vercel_host.split("/", 1)[0]
+        if vercel_host and vercel_host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(vercel_host)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -34,6 +86,7 @@ INSTALLED_APPS = [
     "movies.apps.MoviesConfig",
     "allauth",
     "allauth.account",
+    "allauth.mfa",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "anymail",
@@ -41,12 +94,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "movies.middleware.AdminMFAMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -71,7 +126,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-USE_SQLITE = os.getenv("DJANGO_USE_SQLITE", "False").lower() == "true" or IS_TESTING
+USE_SQLITE = (
+    os.getenv("DJANGO_USE_SQLITE", "False").strip().lower() == "true" or IS_TESTING
+)
+
+if IS_DEPLOYED and USE_SQLITE:
+    raise ImproperlyConfigured("SQLite nao pode ser usado na Vercel ou em producao.")
 
 if DATABASE_URL and not USE_SQLITE:
     DATABASES = {
@@ -81,13 +141,18 @@ if DATABASE_URL and not USE_SQLITE:
             conn_health_checks=True,
         )
     }
-else:
+elif USE_SQLITE and not IS_DEPLOYED:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
+else:
+    raise ImproperlyConfigured(
+        "Configure DATABASE_URL. SQLite so e aceito quando DJANGO_USE_SQLITE=True "
+        "no desenvolvimento local."
+    )
 
 LANGUAGE_CODE = "pt-br"
 TIME_ZONE = "America/Fortaleza"
@@ -97,6 +162,72 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# O projeto nao recebe uploads. Estes limites impedem que o Django mantenha
+# corpos arbitrariamente grandes em memoria antes de uma view rejeita-los.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 100
+DATA_UPLOAD_MAX_NUMBER_FILES = 5
+
+CSP_POLICY = {
+    "default-src": [CSP.SELF],
+    "script-src": [CSP.SELF],
+    "style-src": [CSP.SELF, "https://fonts.googleapis.com"],
+    "img-src": [
+        CSP.SELF,
+        "data:",
+        "https://image.tmdb.org",
+        "https://cdn.watchmode.com",
+    ],
+    "font-src": [CSP.SELF, "https://fonts.gstatic.com"],
+    "connect-src": [CSP.SELF],
+    "frame-src": ["https://www.youtube-nocookie.com"],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+    "report-uri": ["/security/csp-report/"],
+}
+CSP_ENFORCE = os.getenv("DJANGO_CSP_ENFORCE", "False").strip().lower() == "true"
+if CSP_ENFORCE:
+    SECURE_CSP = CSP_POLICY
+else:
+    SECURE_CSP_REPORT_ONLY = CSP_POLICY
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "UserAttributeSimilarityValidator"
+        )
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+# No servidor, o cache usa o proprio Neon para ser compartilhado entre todas
+# as funcoes serverless. Testes permanecem isolados e rapidos em memoria.
+if IS_TESTING:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "qualfilmehoje-tests",
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "qualfilmehoje_cache",
+            "KEY_PREFIX": "qfh",
+            "TIMEOUT": 300,
+            "OPTIONS": {"MAX_ENTRIES": 5000, "CULL_FREQUENCY": 4},
+        }
+    }
 
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -110,10 +241,37 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "email*", "password1*", "password2*"]
 ACCOUNT_USERNAME_MIN_LENGTH = 3
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_SESSION_REMEMBER = False
 ACCOUNT_LOGOUT_ON_GET = False
+ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = False
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_EMAIL_SUBJECT_PREFIX = ""
+ACCOUNT_RATE_LIMITS = {
+    "login": "20/5m/ip",
+    "login_failed": "10/10m/ip,5/10m/key",
+    "signup": "5/h/ip",
+    "reset_password": "5/h/ip,3/h/key",
+    "reset_password_from_key": "10/h/ip",
+}
+
+# A Vercel e o unico proxy confiavel na arquitetura atual. Localmente o XFF e
+# ignorado, evitando que um cliente burle os limites com um header forjado.
+ALLAUTH_TRUSTED_PROXY_COUNT = 1 if IS_VERCEL else 0
+ALLAUTH_RATE_LIMIT_IPV6_PREFIX = 64
+
+MFA_ADAPTER = "movies.mfa_adapter.QualFilmeHojeMFAAdapter"
+MFA_SUPPORTED_TYPES = ["recovery_codes", "totp"]
+MFA_TOTP_ISSUER = "QualFilmeHoje"
+MFA_RECOVERY_CODES_SHOW_ONCE = True
+MFA_TRUST_ENABLED = False
+
+# Sessões curtas e apenas cookies estritamente necessários. A sessão atual é
+# preservada na troca de senha; as demais são eliminadas pelos signals do app.
+SESSION_COOKIE_AGE = 12 * 60 * 60
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
@@ -121,12 +279,14 @@ SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = False
 SOCIALACCOUNT_STORE_TOKENS = False
 
-# WhatsApp Cloud API. Os valores secretos ficam exclusivamente no .env.
+# WhatsApp Cloud API. Os valores secretos ficam exclusivamente no ambiente.
 WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
 WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "").strip()
 META_APP_SECRET = os.getenv("META_APP_SECRET", "").strip()
-WHATSAPP_GRAPH_API_VERSION = os.getenv("WHATSAPP_GRAPH_API_VERSION", "v25.0").strip()
+WHATSAPP_GRAPH_API_VERSION = os.getenv(
+    "WHATSAPP_GRAPH_API_VERSION", "v25.0"
+).strip()
 WHATSAPP_WEBHOOK_CONFIGURED = bool(
     WHATSAPP_ACCESS_TOKEN
     and WHATSAPP_PHONE_NUMBER_ID
@@ -141,11 +301,13 @@ GOOGLE_AUTH_CONFIGURED = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
 CONFIGURED_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "").strip()
 EMAIL_DELIVERY_CONFIGURED = bool(BREVO_API_KEY and CONFIGURED_FROM_EMAIL)
+if IS_DEPLOYED and not EMAIL_DELIVERY_CONFIGURED:
+    raise ImproperlyConfigured(
+        "BREVO_API_KEY e DEFAULT_FROM_EMAIL sao obrigatorios fora do ambiente local."
+    )
 EMAIL_FEATURES_ENABLED = EMAIL_DELIVERY_CONFIGURED or DEBUG or IS_TESTING
 
-DEFAULT_FROM_EMAIL = (
-    CONFIGURED_FROM_EMAIL or "QualFilmeHoje <no-reply@localhost>"
-)
+DEFAULT_FROM_EMAIL = CONFIGURED_FROM_EMAIL or "QualFilmeHoje <no-reply@localhost>"
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 EMAIL_TIMEOUT = 10
 
@@ -157,12 +319,12 @@ elif EMAIL_DELIVERY_CONFIGURED:
 elif DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
-    EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+    raise ImproperlyConfigured(
+        "A entrega de e-mail nao esta configurada; a verificacao nao sera desativada."
+    )
 
-# Não bloqueia cadastros na Vercel antes de existir um remetente real. Assim que
-# BREVO_API_KEY e DEFAULT_FROM_EMAIL forem configurados, a confirmação passa a
-# ser obrigatória e a recuperação de senha fica disponível automaticamente.
-ACCOUNT_EMAIL_VERIFICATION = "mandatory" if EMAIL_FEATURES_ENABLED else "none"
+# Cadastro por senha nunca degrada silenciosamente para e-mail nao verificado.
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {

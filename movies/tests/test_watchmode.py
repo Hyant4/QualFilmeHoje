@@ -26,6 +26,18 @@ class WatchmodeServiceTests(SimpleTestCase):
                 "type": "free",
                 "web_url": "javascript:alert(1)",
             },
+            {
+                "source_id": 3,
+                "name": "Host disfarçado",
+                "type": "free",
+                "web_url": "https://netflix.com.evil.example/title/1",
+            },
+            {
+                "source_id": 4,
+                "name": "HTTP",
+                "type": "free",
+                "web_url": "http://netflix.com/title/1",
+            },
         ]
         catalog = {1: {"name": "Prime Video", "logo_url": "https://example.com/logo.png"}}
 

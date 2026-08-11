@@ -1,0 +1,88 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0a0a">
+  <meta name="description" content="Como o QualFilmeHoje usa e protege seus dados.">
+  <title>Privacidade — QualFilmeHoje</title>
+  <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
+</head>
+<body class="privacy-page">
+  <header class="site-header">
+    <div class="wrap">
+      <nav class="nav" aria-label="Navegação da privacidade">
+        <a href="{% url 'movies:home' %}" class="brand-logo" aria-label="QualFilmeHoje — início">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
+        </a>
+        <a href="{% url 'movies:home' %}" class="nav-back"><span aria-hidden="true">←</span> Voltar ao gerador</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="privacy-main">
+    <article class="wrap privacy-document">
+      <header class="privacy-heading">
+        <p class="eyebrow">Transparência e controle</p>
+        <h1>Privacidade</h1>
+        <p>Esta página explica quais dados o QualFilmeHoje usa para funcionar, com quem eles podem ser compartilhados e quais cookies são necessários.</p>
+        <small class="mono">Atualizada em 11 de agosto de 2026</small>
+      </header>
+
+      <section>
+        <h2>1. Dados usados pelo site</h2>
+        <p>Sem conta, o site usa um identificador aleatório de visitante para relacionar seus últimos sorteios e sua lista ao navegador. Com uma conta, armazenamos nome de usuário, e-mail, senha protegida por hash e os títulos salvos. Se você optar pelo bot, também guardamos o número de WhatsApp e o estado de verificação.</p>
+        <p>Podem existir registros técnicos de segurança e operação, como horário, rota, falha de integração e relatórios CSP sanitizados. O limitador da aplicação transforma o endereço IP em um identificador HMAC temporário; ele não o grava em texto aberto nesse cache.</p>
+      </section>
+
+      <section>
+        <h2>2. Cookies estritamente necessários</h2>
+        <p>Usamos cookies de sessão, autenticação e proteção CSRF para manter o login, preservar a lista no navegador e impedir requisições forjadas. Eles usam <code>HttpOnly</code> na sessão, <code>SameSite=Lax</code> e <code>Secure</code> em produção. A sessão expira em até 12 horas e também ao fechar o navegador.</p>
+        <p>Não usamos cookies de publicidade ou análise comportamental. Por isso, não exibimos um banner de consentimento para cookies opcionais.</p>
+      </section>
+
+      <section>
+        <h2>3. Login com Google</h2>
+        <p>O login com Google só começa quando você escolhe essa opção. Recebemos os dados básicos autorizados, como identificador, nome e e-mail, para criar ou acessar sua conta. O QualFilmeHoje não recebe sua senha do Google e não mantém o token do provedor no banco.</p>
+      </section>
+
+      <section>
+        <h2>4. Serviços externos</h2>
+        <ul>
+          <li><strong>TMDB:</strong> recebe consultas de filmes, séries, gêneros, trailers e reviews feitas pelo servidor.</li>
+          <li><strong>Watchmode:</strong> recebe o ID do título e a região Brasil para localizar links de streaming.</li>
+          <li><strong>Brevo:</strong> processa endereço e conteúdo de e-mails transacionais, como confirmação e recuperação de senha.</li>
+          <li><strong>Google:</strong> processa o OAuth apenas quando você usa o login Google.</li>
+          <li><strong>Meta/WhatsApp:</strong> processa mensagens somente se você vincular voluntariamente seu número ao bot.</li>
+          <li><strong>Vercel e Neon:</strong> hospedam a aplicação e o banco de dados.</li>
+        </ul>
+        <p>TMDB e Watchmode recebem a consulta pelo servidor, sem seu cookie de sessão nem credenciais de login do QualFilmeHoje.</p>
+      </section>
+
+      <section>
+        <h2>5. Retenção e segurança</h2>
+        <p>Contas, listas e o número opcional permanecem enquanto forem necessários para prestar o serviço. O histórico de sorteios é limitado aos 50 registros mais recentes por visitante ou conta. Registros anônimos podem permanecer no banco após o cookie expirar até uma limpeza operacional.</p>
+        <p>Depois de uma troca de senha, as demais sessões autenticadas são encerradas. Segredos de API ficam apenas no servidor, e links externos são validados antes de aparecerem na página.</p>
+      </section>
+
+      <section>
+        <h2>6. Suas escolhas</h2>
+        <p>Você pode remover títulos da lista, desvincular o WhatsApp e encerrar a sessão a qualquer momento. Para solicitar acesso, correção ou exclusão dos dados da conta, responda a um e-mail transacional do QualFilmeHoje ou use o canal de contato divulgado pelo projeto.</p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <a href="{% url 'movies:home' %}" class="brand-logo brand-logo-footer" aria-label="QualFilmeHoje — início">
+        <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48">
+      </a>
+      <a href="#" class="text-link">Voltar ao topo ↑</a>
+    </div>
+  </footer>
+</body>
+</html>

@@ -278,7 +278,7 @@ class MovieViewTests(TestCase):
         self.assertTrue(Favorite.objects.filter(title=title).exists())
 
     @patch("movies.views.get_title_details")
-    def test_trending_title_opens_own_details_page(self, mock_details):
+    def test_trending_title_details_get_does_not_write_business_data(self, mock_details):
         mock_details.return_value = {
             "id": 88,
             "title": "Tendência teste",
@@ -303,7 +303,33 @@ class MovieViewTests(TestCase):
         self.assertContains(response, "Informações do TMDB")
         self.assertContains(response, "Adicionar à minha lista")
         self.assertNotContains(response, 'class="hero"')
-        self.assertTrue(Title.objects.filter(tmdb_id=88, media_type="movie").exists())
+        self.assertFalse(Title.objects.filter(tmdb_id=88, media_type="movie").exists())
+        self.assertNotIn("sessionid", self.client.cookies)
+
+    @patch("movies.views.get_title_details")
+    def test_favorite_post_persists_a_title_not_seen_before(self, mock_details):
+        mock_details.return_value = {
+            "id": 91,
+            "title": "Persistido somente no POST",
+            "original_title": "Saved on POST",
+            "media_type": "movie",
+            "release_date": "2026-04-10",
+            "vote_average": 8.1,
+        }
+
+        response = self.client.post(
+            reverse("movies:toggle_favorite"),
+            {"media_type": "movie", "tmdb_id": "91"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_details.assert_called_once_with(
+            "movie",
+            91,
+            include_streaming=False,
+        )
+        title = Title.objects.get(tmdb_id=91, media_type="movie")
+        self.assertTrue(Favorite.objects.filter(title=title).exists())
 
     def test_favorite_endpoint_rejects_get(self):
         response = self.client.get(reverse("movies:toggle_favorite"))

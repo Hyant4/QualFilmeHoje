@@ -5,10 +5,11 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from movies.models import Favorite, Title, WhatsAppContact
+from movies.views import whatsapp_webhook
 
 APP_SECRET = "test-meta-app-secret"
 VERIFY_TOKEN = "test-webhook-token"
@@ -69,6 +70,29 @@ class WhatsAppWebhookTests(TestCase):
         response = self._post(self._payload(), signature="sha256=invalid")
 
         self.assertEqual(response.status_code, 403)
+
+    def test_webhook_rejects_an_oversized_body_before_parsing(self):
+        body = b"x" * (256 * 1024 + 1)
+        response = self.client.post(
+            reverse("movies:whatsapp_webhook"),
+            data=body,
+            content_type="application/json",
+            HTTP_X_HUB_SIGNATURE_256=self._signature(body),
+        )
+
+        self.assertEqual(response.status_code, 413)
+
+    def test_webhook_rejects_an_invalid_content_length(self):
+        request = RequestFactory().post(
+            reverse("movies:whatsapp_webhook"),
+            data=b"{}",
+            content_type="application/json",
+        )
+        request.META["CONTENT_LENGTH"] = "not-a-number"
+
+        response = whatsapp_webhook(request)
+
+        self.assertEqual(response.status_code, 400)
 
     @patch("movies.views.send_text_message")
     def test_favorites_command_marks_contact_verified_and_replies(self, send_message):

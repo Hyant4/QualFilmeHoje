@@ -4,19 +4,28 @@ A chave fica no servidor e as respostas são armazenadas em cache para poupar a
 cota mensal do plano gratuito.
 """
 
-import json
+import math
 import os
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode
+from urllib.request import Request
 
 from django.core.cache import cache
+
+from .http_client import ExternalResponseError, open_json
+from .urls import (
+    STREAMING_HOSTS,
+    WATCHMODE_IMAGE_HOSTS,
+    safe_https_url,
+)
 
 API_BASE_URL = "https://api.watchmode.com/v1"
 REGION = "BR"
 LINK_CACHE_SECONDS = 6 * 60 * 60
 CATALOG_CACHE_SECONDS = 7 * 24 * 60 * 60
 REQUEST_TIMEOUT_SECONDS = 5
+MAX_RESPONSE_BYTES = 1024 * 1024
+MAX_TMDB_ID = 2_147_483_647
 
 SOURCE_GROUPS = (
     ("sub", "Incluso na assinatura"),
@@ -50,8 +59,14 @@ def _get(path, **params):
     )
 
     try:
-        with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            return json.load(response)
+        payload = open_json(
+            request,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            max_bytes=MAX_RESPONSE_BYTES,
+        )
+        if not isinstance(payload, list):
+            raise ExternalResponseError("A Watchmode nao retornou uma lista JSON.")
+        return payload
     except HTTPError as error:
         if error.code == 404:
             return []
@@ -64,17 +79,22 @@ def _get(path, **params):
         raise WatchmodeError(message) from error
     except (URLError, TimeoutError) as error:
         raise WatchmodeError("A busca por links diretos demorou para responder.") from error
-    except (json.JSONDecodeError, UnicodeDecodeError, TypeError) as error:
+    except (ExternalResponseError, TypeError) as error:
         raise WatchmodeError("A Watchmode devolveu uma resposta inesperada.") from error
 
 
-def _safe_url(value):
-    if not isinstance(value, str):
-        return ""
-    parsed = urlparse(value)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        return ""
-    return value
+def _safe_int(value):
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return parsed if 1 <= parsed <= MAX_TMDB_ID else None
+
+
+def _safe_text(value, maximum):
+    return str(value)[:maximum] if isinstance(value, str | int | float) else ""
 
 
 def _source_catalog():
@@ -85,15 +105,18 @@ def _source_catalog():
 
     sources = _get("/sources/", regions=REGION, types="sub,purchase,free,tve")
     catalog = {}
-    if isinstance(sources, list):
-        for source in sources:
-            source_id = source.get("id")
-            if source_id is None:
-                continue
-            catalog[source_id] = {
-                "name": source.get("name") or "Plataforma",
-                "logo_url": _safe_url(source.get("logo_100px")),
-            }
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        source_id = _safe_int(source.get("id"))
+        if source_id is None:
+            continue
+        catalog[source_id] = {
+            "name": _safe_text(source.get("name"), 120) or "Plataforma",
+            "logo_url": safe_https_url(
+                source.get("logo_100px"), WATCHMODE_IMAGE_HOSTS
+            ),
+        }
     cache.set(cache_key, catalog, CATALOG_CACHE_SECONDS)
     return catalog
 
@@ -106,14 +129,28 @@ def _normalise_sources(sources, catalog):
         return []
 
     for source in sources:
+        if not isinstance(source, dict):
+            continue
         source_type = source.get("type")
-        web_url = _safe_url(source.get("web_url"))
+        web_url = safe_https_url(source.get("web_url"), STREAMING_HOSTS)
         if source_type not in by_type or not web_url:
             continue
 
-        source_id = source.get("source_id")
+        source_id = _safe_int(source.get("source_id"))
         source_info = catalog.get(source_id, {})
-        name = source.get("name") or source_info.get("name") or "Plataforma"
+        name = (
+            _safe_text(source.get("name"), 120)
+            or source_info.get("name")
+            or "Plataforma"
+        )
+        price = source.get("price")
+        if (
+            not isinstance(price, int | float)
+            or isinstance(price, bool)
+            or not math.isfinite(float(price))
+            or not 0 <= float(price) <= 100_000
+        ):
+            price = None
         unique_key = (source_type, source_id or name.casefold(), web_url)
         if unique_key in seen:
             continue
@@ -124,8 +161,8 @@ def _normalise_sources(sources, catalog):
                 "provider_name": name,
                 "logo_url": source_info.get("logo_url", ""),
                 "web_url": web_url,
-                "format": source.get("format"),
-                "price": source.get("price"),
+                "format": _safe_text(source.get("format"), 30),
+                "price": price,
             }
         )
 
@@ -139,13 +176,17 @@ def _normalise_sources(sources, catalog):
 def get_streaming_groups(media_type, tmdb_id):
     """Retorna plataformas agrupadas, com URL web direta para o título."""
 
-    media_type = "tv" if media_type == "tv" else "movie"
+    if media_type not in {"movie", "tv"}:
+        raise WatchmodeError("Tipo de titulo invalido para a Watchmode.")
+    tmdb_id = _safe_int(tmdb_id)
+    if tmdb_id is None:
+        raise WatchmodeError("ID de titulo invalido para a Watchmode.")
     cache_key = f"watchmode:links:{REGION}:{media_type}:{tmdb_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
-    watchmode_id = f"{media_type}-{int(tmdb_id)}"
+    watchmode_id = f"{media_type}-{tmdb_id}"
     sources = _get(f"/title/{watchmode_id}/sources/", regions=REGION)
     try:
         catalog = _source_catalog()
