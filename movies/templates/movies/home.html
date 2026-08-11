@@ -9,22 +9,31 @@
   <meta name="theme-color" content="#0e0a0a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Encontre um filme ou uma série por gênero e nota e descubra onde assistir no Brasil.">
+  {% if is_detail_page and movie %}
+  <meta name="description" content="Veja sinopse, trailer, avaliação, elenco e onde assistir {{ movie.title }} no Brasil.">
+  {% else %}
+  <meta name="description" content="Use o gerador gratuito para escolher filmes e séries por gênero, nota e ano e descubra onde assistir no Brasil.">
+  {% endif %}
+  <meta name="robots" content="{% if seo_noindex_override %}noindex, nofollow{% else %}{{ seo_robots }}{% endif %}">
+  {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
+  <link rel="canonical" href="{{ canonical_url }}">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="QualFilmeHoje — Sua próxima sessão">
-  <meta property="og:description" content="Escolha o clima. A gente escolhe o filme.">
-  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
+  <meta property="og:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}">
+  <meta property="og:description" content="{% if is_detail_page and movie %}Sinopse, trailer, avaliação, elenco e onde assistir no Brasil.{% else %}Escolha o clima. A gente escolhe o filme ou a série.{% endif %}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  <meta property="og:image" content="{{ site_url }}{{ og_image }}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="QualFilmeHoje — Sua próxima sessão">
-  <meta name="twitter:description" content="Escolha o clima. A gente escolhe o filme.">
-  <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ og_image }}">
-  <title>{% if is_detail_page and movie %}{{ movie.title }} — QualFilmeHoje{% else %}QualFilmeHoje — Sua próxima sessão{% endif %}</title>
+  <meta name="twitter:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}">
+  <meta name="twitter:description" content="{% if is_detail_page and movie %}Sinopse, trailer, avaliação, elenco e onde assistir no Brasil.{% else %}Escolha o clima. A gente escolhe o filme ou a série.{% endif %}">
+  <meta name="twitter:image" content="{{ site_url }}{{ og_image }}">
+  <title>{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}</title>
   <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="preload" as="image" href="{{ hero_image }}" type="image/webp">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
   <script src="{% static 'movies/js/site.js' %}" defer></script>
+  {% if seo_json_ld %}<script type="application/ld+json">{{ seo_json_ld|safe }}</script>{% endif %}
 </head>
 <body class="{% if error %}has-top-alert {% endif %}{% if is_detail_page %}detail-page{% endif %}">
   <header class="site-header">

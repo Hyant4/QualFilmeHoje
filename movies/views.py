@@ -5,6 +5,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlsplit, urlunsplit
 
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -22,6 +23,7 @@ from .services.library import (
 )
 from .services.tmdb import (
     TMDBError,
+    TMDBNotFound,
     get_genres,
     get_now_playing_movies,
     get_random_title,
@@ -38,6 +40,20 @@ MAX_GENRE_ID = 999_999
 MAX_TMDB_ID = 2_147_483_647
 CSP_REPORT_MAX_BYTES = 16 * 1024
 logger = logging.getLogger(__name__)
+
+
+@require_GET
+def robots_txt(_request):
+    lines = (
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /admin/",
+        "Disallow: /security/",
+        "Disallow: /gerar/",
+        "Disallow: /favoritos/",
+        f"Sitemap: {settings.SITE_URL}/sitemap.xml",
+    )
+    return HttpResponse("\n".join(lines) + "\n", content_type="text/plain")
 
 
 def _sanitise_csp_report_value(key, value):
@@ -343,8 +359,14 @@ def title_detail(request, media_type, tmdb_id):
             user=request.user,
         )
         context["movie"] = movie
+    except TMDBNotFound as exc:
+        context["error"] = str(exc)
+        context["seo_noindex_override"] = True
+        return render(request, "movies/home.html", context, status=404)
     except TMDBError as exc:
         context["error"] = str(exc)
+        context["seo_noindex_override"] = True
+        return render(request, "movies/home.html", context, status=503)
     return render(request, "movies/home.html", context)
 
 

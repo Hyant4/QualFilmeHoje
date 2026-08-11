@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
@@ -61,6 +62,26 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+SITE_URL = os.getenv(
+    "SITE_URL", "https://qualfilmehoje.vercel.app"
+).strip().rstrip("/")
+site_url_parts = urlsplit(SITE_URL)
+if (
+    site_url_parts.scheme not in {"http", "https"}
+    or not site_url_parts.netloc
+    or site_url_parts.path
+    or site_url_parts.query
+    or site_url_parts.fragment
+):
+    raise ImproperlyConfigured(
+        "SITE_URL deve conter apenas a origem publica, por exemplo "
+        "https://qualfilmehoje.vercel.app."
+    )
+if IS_DEPLOYED and site_url_parts.scheme != "https":
+    raise ImproperlyConfigured("SITE_URL deve usar HTTPS fora do ambiente local.")
+
+GOOGLE_SITE_VERIFICATION = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
+
 # Cada Preview da Vercel recebe um hostname proprio. Aceitamos apenas os
 # hostnames exatos fornecidos pela plataforma, sem liberar o curinga amplo
 # ``.vercel.app``.
@@ -82,6 +103,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sitemaps",
     "django.contrib.staticfiles",
     "movies.apps.MoviesConfig",
     "allauth",
@@ -118,6 +140,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "movies.context_processors.authentication",
+                "movies.context_processors.seo_metadata",
             ],
         },
     },
