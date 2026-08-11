@@ -1,6 +1,8 @@
 import json
+from pathlib import Path
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.http import HttpResponse
@@ -10,6 +12,22 @@ from django.urls import reverse
 from movies.security import get_client_ip, rate_limit
 from movies.services.tmdb import TMDBNotFound, _fetch_title_extras, get_title_details
 from movies.views import _parse_filters
+
+
+class DeploymentHeaderTests(SimpleTestCase):
+    def test_vercel_static_assets_receive_nosniff(self):
+        config = json.loads(
+            Path(settings.BASE_DIR, "vercel.json").read_text(encoding="utf-8")
+        )
+
+        static_rule = next(
+            rule for rule in config["headers"] if rule["source"] == "/static/(.*)"
+        )
+        headers = {
+            header["key"].casefold(): header["value"]
+            for header in static_rule["headers"]
+        }
+        self.assertEqual(headers["x-content-type-options"], "nosniff")
 
 
 class InputValidationTests(SimpleTestCase):

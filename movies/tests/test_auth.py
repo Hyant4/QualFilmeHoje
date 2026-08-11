@@ -190,6 +190,7 @@ class AuthenticationTests(TestCase):
         self.assertTrue(settings.SESSION_EXPIRE_AT_BROWSER_CLOSE)
         self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
         self.assertEqual(settings.SESSION_COOKIE_SAMESITE, "Lax")
+        self.assertTrue(settings.CSRF_COOKIE_HTTPONLY)
         self.assertFalse(settings.ACCOUNT_SESSION_REMEMBER)
 
         response = self.client.get(reverse("movies:privacy"))

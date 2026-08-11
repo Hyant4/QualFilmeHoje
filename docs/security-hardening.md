@@ -316,9 +316,10 @@ só então altere a versão fixa.
 
 A duração máxima da sessão caiu do padrão de duas semanas para 12 horas e o
 cookie expira ao fechar o navegador. O allauth não oferece mais a opção de
-"lembrar" a sessão. Permanecem explícitos `HttpOnly` para a sessão e
-`SameSite=Lax` para sessão e CSRF; em produção, sessão e CSRF continuam com
-`Secure`.
+"lembrar" a sessão. Permanecem explícitos `HttpOnly` e `SameSite=Lax` para
+sessão e CSRF; em produção, ambos continuam com `Secure`. A configuração da
+Vercel também aplica `X-Content-Type-Options: nosniff` aos arquivos em
+`/static/`, que não passam pelo middleware do Django.
 
 Quando uma senha é trocada, a sessão atual é preservada e todas as outras
 sessões autenticadas daquela conta são apagadas. Em uma recuperação de senha,
