@@ -1,0 +1,10 @@
+title = "QualFilmeHoje secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "IndexNow ownership key is intentionally public by protocol"
+regexes = [
+  '''a8c7cb6034564b13897e893feebabe4e''',
+]
