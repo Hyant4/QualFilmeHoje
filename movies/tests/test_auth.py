@@ -15,7 +15,7 @@ from django.core import mail
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from movies.models import Favorite, Generation, Title, WhatsAppContact
+from movies.models import Favorite, Generation, Title
 
 GOOGLE_PROVIDER_SETTINGS = {
     "google": {
@@ -411,51 +411,3 @@ class AuthenticationTests(TestCase):
 
         self.assertEqual(allowed.status_code, 200)
         self.assertFalse(get_mfa_adapter().can_delete_authenticator(authenticator))
-
-    def test_whatsapp_number_is_optional_and_normalized_for_the_account(self):
-        user = self.create_user()
-        self.client.force_login(user)
-
-        settings_response = self.client.get(reverse("movies:whatsapp_settings"))
-        self.assertEqual(settings_response.status_code, 200)
-        self.assertContains(settings_response, "Seu número do WhatsApp")
-
-        response = self.client.post(
-            reverse("movies:whatsapp_settings"),
-            {"phone_number": "(85) 99999-0000"},
-        )
-
-        self.assertRedirects(response, reverse("movies:whatsapp_settings"))
-        contact = WhatsAppContact.objects.get(user=user)
-        self.assertEqual(contact.phone_number, "+5585999990000")
-        self.assertFalse(contact.is_verified)
-
-    def test_whatsapp_number_cannot_be_shared_by_two_accounts(self):
-        first_user = self.create_user("primeira@example.com")
-        second_user = self.create_user("segunda@example.com")
-        WhatsAppContact.objects.create(
-            user=first_user, phone_number="+5585999990000"
-        )
-        self.client.force_login(second_user)
-
-        response = self.client.post(
-            reverse("movies:whatsapp_settings"),
-            {"phone_number": "+55 85 99999-0000"},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Este número já está vinculado a outra conta.")
-        self.assertFalse(WhatsAppContact.objects.filter(user=second_user).exists())
-
-    def test_whatsapp_number_can_be_removed(self):
-        user = self.create_user()
-        WhatsAppContact.objects.create(user=user, phone_number="+5585999990000")
-        self.client.force_login(user)
-
-        response = self.client.post(
-            reverse("movies:whatsapp_settings"),
-            {"phone_number": ""},
-        )
-
-        self.assertRedirects(response, reverse("movies:whatsapp_settings"))
-        self.assertFalse(WhatsAppContact.objects.filter(user=user).exists())

@@ -258,8 +258,6 @@ Antes de renderizar ou persistir dados externos, o código também:
 - restringe imagens aos hosts oficiais do TMDB/Watchmode;
 - restringe reviews ao TMDB e links de streaming a uma allowlist HTTPS;
 - recusa URLs com credenciais, porta diferente de 443 ou host disfarçado;
-- limita o webhook da Meta a 256 KiB, 100 mensagens e remetentes de 10 a 15
-  dígitos, antes de consultar o banco ou responder.
 
 Uma plataforma nova da Watchmode pode exigir a inclusão de seu domínio em
 `STREAMING_HOSTS`. Faça isso apenas depois de confirmar o domínio oficial; não
@@ -270,13 +268,11 @@ Validação automatizada:
 ```powershell
 .venv\Scripts\python.exe manage.py test `
   movies.tests.test_external_security `
-  movies.tests.test_watchmode `
-  movies.tests.test_whatsapp
+  movies.tests.test_watchmode
 ```
 
 Os testes cobrem redirect com credencial, tamanho e tipo de JSON, hosts
-disfarçados, `javascript:`, HTTP, IDs Unicode, `NaN`, poster externo e webhook
-grande. Para validar uma nova plataforma, adicione primeiro um caso positivo e
+disfarçados, `javascript:`, HTTP, IDs Unicode, `NaN` e poster externo. Para validar uma nova plataforma, adicione primeiro um caso positivo e
 um host disfarçado negativo aos testes de Watchmode.
 
 ## 7. Dependências, Python e CI de segurança
@@ -331,10 +327,10 @@ assinado das sessões do Django, não um valor fornecido pelo navegador.
 
 A rota `/privacidade/` explica em linguagem direta:
 
-- dados anônimos, dados da conta, lista e WhatsApp opcional;
+- dados anônimos, dados da conta e lista;
 - cookies técnicos e seu prazo;
 - login Google sem armazenamento do token;
-- uso de TMDB, Watchmode, Brevo, Meta, Vercel e Neon;
+- uso de TMDB, Watchmode, Brevo, Google, Vercel e Neon;
 - retenção, segurança e escolhas do usuário.
 
 Há links para a política no rodapé da home e nas telas de autenticação. Não foi

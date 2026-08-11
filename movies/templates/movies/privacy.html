@@ -35,7 +35,7 @@
 
       <section>
         <h2>1. Dados usados pelo site</h2>
-        <p>Sem conta, o site usa um identificador aleatório de visitante para relacionar seus últimos sorteios e sua lista ao navegador. Com uma conta, armazenamos nome de usuário, e-mail, senha protegida por hash e os títulos salvos. Se você optar pelo bot, também guardamos o número de WhatsApp e o estado de verificação.</p>
+        <p>Sem conta, o site usa um identificador aleatório de visitante para relacionar seus últimos sorteios e sua lista ao navegador. Com uma conta, armazenamos nome de usuário, e-mail, senha protegida por hash e os títulos salvos.</p>
         <p>Podem existir registros técnicos de segurança e operação, como horário, rota, falha de integração e relatórios CSP sanitizados. O limitador da aplicação transforma o endereço IP em um identificador HMAC temporário; ele não o grava em texto aberto nesse cache.</p>
       </section>
 
@@ -57,7 +57,6 @@
           <li><strong>Watchmode:</strong> recebe o ID do título e a região Brasil para localizar links de streaming.</li>
           <li><strong>Brevo:</strong> processa endereço e conteúdo de e-mails transacionais, como confirmação e recuperação de senha.</li>
           <li><strong>Google:</strong> processa o OAuth apenas quando você usa o login Google.</li>
-          <li><strong>Meta/WhatsApp:</strong> processa mensagens somente se você vincular voluntariamente seu número ao bot.</li>
           <li><strong>Vercel e Neon:</strong> hospedam a aplicação e o banco de dados.</li>
         </ul>
         <p>TMDB e Watchmode recebem a consulta pelo servidor, sem seu cookie de sessão nem credenciais de login do QualFilmeHoje.</p>
@@ -65,13 +64,13 @@
 
       <section>
         <h2>5. Retenção e segurança</h2>
-        <p>Contas, listas e o número opcional permanecem enquanto forem necessários para prestar o serviço. O histórico de sorteios é limitado aos 50 registros mais recentes por visitante ou conta. Registros anônimos podem permanecer no banco após o cookie expirar até uma limpeza operacional.</p>
+        <p>Contas e listas permanecem enquanto forem necessárias para prestar o serviço. O histórico de sorteios é limitado aos 50 registros mais recentes por visitante ou conta. Registros anônimos podem permanecer no banco após o cookie expirar até uma limpeza operacional.</p>
         <p>Depois de uma troca de senha, as demais sessões autenticadas são encerradas. Segredos de API ficam apenas no servidor, e links externos são validados antes de aparecerem na página.</p>
       </section>
 
       <section>
         <h2>6. Suas escolhas</h2>
-        <p>Você pode remover títulos da lista, desvincular o WhatsApp e encerrar a sessão a qualquer momento. Para solicitar acesso, correção ou exclusão dos dados da conta, responda a um e-mail transacional do QualFilmeHoje ou use o canal de contato divulgado pelo projeto.</p>
+        <p>Você pode remover títulos da lista e encerrar a sessão a qualquer momento. Para solicitar acesso, correção ou exclusão dos dados da conta, responda a um e-mail transacional do QualFilmeHoje ou use o canal de contato divulgado pelo projeto.</p>
       </section>
     </article>
   </main>

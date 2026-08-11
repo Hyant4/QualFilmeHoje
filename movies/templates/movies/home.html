@@ -40,7 +40,6 @@
               <span class="user-avatar" aria-hidden="true">{{ account_name|first|upper }}</span>
               <span class="user-copy"><small>Sessão ativa</small><strong>{{ account_name }}</strong></span>
             </span>
-            <a href="{% url 'movies:whatsapp_settings' %}" class="nav-account">WhatsApp</a>
             <form method="post" action="{% url 'account_logout' %}" class="nav-logout-form">
               {% csrf_token %}
               <button type="submit" class="nav-account nav-logout">Sair</button>

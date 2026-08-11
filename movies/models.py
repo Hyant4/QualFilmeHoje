@@ -142,30 +142,3 @@ class SharedCacheEntry(models.Model):
 
     def __str__(self):
         return self.cache_key
-
-
-class WhatsAppContact(models.Model):
-    """Número opcional usado exclusivamente para conectar a conta ao bot."""
-
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="whatsapp_contact",
-        verbose_name="usuário",
-    )
-    phone_number = models.CharField(
-        "número do WhatsApp",
-        max_length=16,
-        unique=True,
-        help_text="Formato internacional, por exemplo +5585999990000.",
-    )
-    is_verified = models.BooleanField("confirmado no WhatsApp", default=False)
-    created_at = models.DateTimeField("criado em", auto_now_add=True)
-    updated_at = models.DateTimeField("atualizado em", auto_now=True)
-
-    class Meta:
-        verbose_name = "contato do WhatsApp"
-        verbose_name_plural = "contatos do WhatsApp"
-
-    def __str__(self):
-        return f"{self.user} — {self.phone_number}"
