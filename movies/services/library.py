@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from django.db import transaction
 
 from ..models import Favorite, Generation, Title
+from .indexnow import submit_title_url
 from .urls import TMDB_IMAGE_HOSTS, safe_https_url
 
 HISTORY_DISPLAY_LIMIT = 8
@@ -56,7 +57,7 @@ def save_title_snapshot(title_data):
     if media_type not in {Title.MOVIE, Title.TV}:
         media_type = Title.MOVIE
 
-    title, _created = Title.objects.update_or_create(
+    title, created = Title.objects.update_or_create(
         tmdb_id=tmdb_id,
         media_type=media_type,
         defaults={
@@ -69,6 +70,10 @@ def save_title_snapshot(title_data):
             "vote_average": _parse_rating(title_data.get("vote_average")),
         },
     )
+    if created:
+        transaction.on_commit(
+            lambda: submit_title_url(media_type=media_type, tmdb_id=tmdb_id)
+        )
     return title
 
 

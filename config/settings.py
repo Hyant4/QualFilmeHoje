@@ -88,6 +88,22 @@ BING_SITE_VERIFICATION = (
     os.getenv("BING_SITE_VERIFICATION", "").strip()
     or "BAADAFCE767CC2A73B3A5DEF51A06BC7"
 )
+INDEXNOW_KEY = (
+    os.getenv("INDEXNOW_KEY", "").strip()
+    or "a8c7cb6034564b13897e893feebabe4e"
+)
+if not 8 <= len(INDEXNOW_KEY) <= 128 or any(
+    not character.isascii()
+    or not (character.isalnum() or character == "-")
+    for character in INDEXNOW_KEY
+):
+    raise ImproperlyConfigured("INDEXNOW_KEY possui formato invalido.")
+indexnow_enabled_value = os.getenv(
+    "INDEXNOW_ENABLED", "True" if IS_PRODUCTION else "False"
+).strip().lower()
+if indexnow_enabled_value not in {"true", "false"}:
+    raise ImproperlyConfigured("INDEXNOW_ENABLED deve ser True ou False.")
+INDEXNOW_ENABLED = indexnow_enabled_value == "true"
 
 # Cada Preview da Vercel recebe um hostname proprio. Aceitamos apenas os
 # hostnames exatos fornecidos pela plataforma, sem liberar o curinga amplo

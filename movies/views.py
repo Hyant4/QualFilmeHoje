@@ -56,6 +56,14 @@ def robots_txt(_request):
     return HttpResponse("\n".join(lines) + "\n", content_type="text/plain")
 
 
+@require_GET
+def indexnow_key(_request):
+    response = HttpResponse(settings.INDEXNOW_KEY, content_type="text/plain")
+    response["X-Robots-Tag"] = "noindex"
+    response["Cache-Control"] = "public, max-age=86400"
+    return response
+
+
 def _sanitise_csp_report_value(key, value):
     if not isinstance(value, str | int | float):
         return ""

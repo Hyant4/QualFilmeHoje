@@ -1,5 +1,6 @@
-from django.urls import path
+from django.conf import settings
 from django.contrib.sitemaps.views import sitemap
+from django.urls import path
 
 from . import views
 from .sitemaps import StaticSitemap, TitleSitemap
@@ -14,6 +15,11 @@ sitemaps = {
 urlpatterns = [
     path("", views.home, name="home"),
     path("robots.txt", views.robots_txt, name="robots_txt"),
+    path(
+        f"{settings.INDEXNOW_KEY}.txt",
+        views.indexnow_key,
+        name="indexnow_key",
+    ),
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
     path("privacidade/", views.privacy, name="privacy"),
     path("security/csp-report/", views.csp_report, name="csp_report"),
