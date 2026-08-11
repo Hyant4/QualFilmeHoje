@@ -10,10 +10,19 @@ from movies.models import Title
 from movies.services.tmdb import TMDBError, TMDBNotFound
 
 CANONICAL_SITE = "https://qualfilmehoje.vercel.app"
+GOOGLE_VERIFICATION_TOKEN = "8J1E6sV8WN1zxIrmvUWlcKWKDZ8lurm1bycxUgO2ssc"
 
 
 @override_settings(SITE_URL=CANONICAL_SITE)
 class SEOEndpointsTests(TestCase):
+    def test_home_exposes_google_search_console_verification(self):
+        response = self.client.get(reverse("movies:home"))
+
+        self.assertContains(
+            response,
+            f'<meta name="google-site-verification" content="{GOOGLE_VERIFICATION_TOKEN}">',
+        )
+
     def test_robots_allows_public_pages_and_references_sitemap(self):
         response = self.client.get(reverse("movies:robots_txt"))
 

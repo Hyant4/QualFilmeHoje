@@ -80,7 +80,10 @@ if (
 if IS_DEPLOYED and site_url_parts.scheme != "https":
     raise ImproperlyConfigured("SITE_URL deve usar HTTPS fora do ambiente local.")
 
-GOOGLE_SITE_VERIFICATION = os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
+GOOGLE_SITE_VERIFICATION = (
+    os.getenv("GOOGLE_SITE_VERIFICATION", "").strip()
+    or "8J1E6sV8WN1zxIrmvUWlcKWKDZ8lurm1bycxUgO2ssc"
+)
 
 # Cada Preview da Vercel recebe um hostname proprio. Aceitamos apenas os
 # hostnames exatos fornecidos pela plataforma, sem liberar o curinga amplo
