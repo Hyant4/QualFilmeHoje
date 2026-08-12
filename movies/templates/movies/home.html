@@ -47,7 +47,6 @@
           <span class="brand-name" aria-hidden="true">ualFilmeHoje</span>
         </a>
         <div class="nav-actions">
-          <a href="{% url 'movies:favorites' %}" class="nav-list-link">Minha lista</a>
           {% if user.is_authenticated %}
             {% firstof user.get_full_name user.username user.email as account_name %}
             <span class="user-summary" title="{{ account_name }}">
@@ -61,6 +60,7 @@
           {% else %}
             <a href="{% url 'account_login' %}" class="nav-account">Entrar</a>
           {% endif %}
+          <a href="{% url 'movies:favorites' %}" class="nav-list-link">Minha lista</a>
           <a href="{% if is_detail_page or is_content_page %}{% url 'movies:home' %}#gerador{% else %}#gerador{% endif %}" class="nav-cta">Sortear agora</a>
         </div>
       </nav>

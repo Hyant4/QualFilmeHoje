@@ -25,7 +25,6 @@
           <span class="brand-name" aria-hidden="true">ualFilmeHoje</span>
         </a>
         <div class="nav-actions">
-          <a href="{% url 'movies:favorites' %}" class="nav-list-link" aria-current="page">Minha lista</a>
           {% if user.is_authenticated %}
             <form method="post" action="{% url 'account_logout' %}" class="nav-logout-form">
               {% csrf_token %}
@@ -34,6 +33,7 @@
           {% else %}
             <a href="{% url 'account_login' %}" class="nav-account">Entrar</a>
           {% endif %}
+          <a href="{% url 'movies:favorites' %}" class="nav-list-link" aria-current="page">Minha lista</a>
           <a href="{% url 'movies:home' %}#gerador" class="nav-cta">Sortear agora</a>
         </div>
       </nav>
