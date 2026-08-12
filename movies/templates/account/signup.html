@@ -41,7 +41,15 @@
       <div class="auth-field{% if form.password1.errors %} has-error{% endif %}">
         <label for="{{ form.password1.id_for_label }}">Senha</label>
         {{ form.password1 }}
-        {% if form.password1.help_text %}<div class="field-help">{{ form.password1.help_text|safe }}</div>{% endif %}
+        <div class="password-guide" id="password-guide">
+          <strong>Crie uma senha difícil de adivinhar</strong>
+          <ul>
+            <li>Use pelo menos 12 caracteres.</li>
+            <li>Combine palavras que só você relaciona, um número e um símbolo.</li>
+            <li>Não use seu nome, e-mail nem uma senha de outro site.</li>
+          </ul>
+          <p><span>Exemplo de formato:</span> Palavra!Filme27Lugar <em>— não copie este exemplo.</em></p>
+        </div>
         {% for error in form.password1.errors %}<small>{{ error }}</small>{% endfor %}
       </div>
       <div class="auth-field{% if form.password2.errors %} has-error{% endif %}">

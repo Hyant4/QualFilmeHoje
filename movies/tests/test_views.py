@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -10,6 +11,48 @@ from movies.services.tmdb import TMDBError
 
 
 class MovieViewTests(TestCase):
+    def test_favorites_page_renders_four_column_cards_and_account_note(self):
+        visitor_id = uuid.uuid4()
+        session = self.client.session
+        session["visitor_id"] = str(visitor_id)
+        session.save()
+        title = Title.objects.create(
+            tmdb_id=321,
+            media_type="movie",
+            name="Filme guardado",
+            poster_url="https://image.tmdb.org/t/p/w500/poster.jpg",
+            vote_average=8.4,
+        )
+        Favorite.objects.create(visitor_id=visitor_id, title=title)
+
+        response = self.client.get(reverse("movies:favorites"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Minha lista")
+        self.assertContains(response, "Filme guardado")
+        self.assertContains(response, 'class="favorites-grid"')
+        self.assertContains(response, "Crie uma conta gratuita")
+        self.assertContains(response, "poster.jpg")
+
+    def test_authenticated_favorites_page_uses_profile_list_without_signup_note(self):
+        user = get_user_model().objects.create_user(
+            username="colecionador",
+            email="colecionador@example.com",
+            password="CinemaPortfolio2026!",
+        )
+        title = Title.objects.create(
+            tmdb_id=654,
+            media_type="tv",
+            name="Série do perfil",
+        )
+        Favorite.objects.create(visitor_id=uuid.uuid4(), user=user, title=title)
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("movies:favorites"))
+
+        self.assertContains(response, "Série do perfil")
+        self.assertNotContains(response, "Crie uma conta gratuita")
+
     @patch(
         "movies.views.get_upcoming_movies",
         return_value=[
@@ -75,25 +118,33 @@ class MovieViewTests(TestCase):
         self.assertContains(response, 'type="range"')
         self.assertContains(response, 'step="0.1"')
         self.assertContains(response, 'name="min_release_year"')
+        self.assertContains(response, 'name="runtime_filter"')
+        self.assertContains(response, 'name="certification"')
+        self.assertNotContains(response, 'name="special_category"')
+        self.assertNotContains(response, ">Estilo<")
+        self.assertContains(response, 'value="special:korean_thriller"')
+        self.assertContains(response, 'value="special:korean_drama"')
+        self.assertContains(response, "Thriller coreano")
+        self.assertContains(response, "Dorama coreano")
         self.assertContains(response, 'step="1"')
         self.assertContains(response, "Ano mínimo de lançamento")
         self.assertContains(response, "Nota máxima no TMDB")
         self.assertContains(response, "Séries")
         self.assertContains(response, "Nota mínima no TMDB")
-        self.assertContains(response, "hero-pov.webp")
+        self.assertContains(response, "hero-session-focus.webp")
         self.assertContains(response, "logo-q.png", count=5)
         self.assertContains(response, 'rel="icon"')
-        self.assertContains(response, "Escolhendo sua sessão")
+        self.assertContains(response, "Escolha sua sessão")
         self.assertContains(response, "tv-screen-glow")
         self.assertContains(response, "ualFilmeHoje")
         self.assertContains(response, 'class="hero-title-main"')
-        self.assertContains(response, "Tendências")
+        self.assertContains(response, "Os 10 filmes em alta")
         self.assertContains(response, "Filme em alta")
         self.assertContains(
             response,
             reverse("movies:title_detail", args=("movie", 99)),
         )
-        self.assertContains(response, "Top 10 séries")
+        self.assertContains(response, "As 10 séries em alta")
         self.assertContains(response, "Série em alta")
         self.assertContains(
             response,
@@ -124,6 +175,7 @@ class MovieViewTests(TestCase):
             "vote_count": 123,
             "release_date": "2024-01-01",
             "runtime": 120,
+            "backdrop_url": "https://image.tmdb.org/t/p/w1280/backdrop-teste.jpg",
             "genres": [{"name": "Drama"}],
             "overview": "Uma sinopse.",
             "reviews": [],
@@ -159,7 +211,7 @@ class MovieViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_random.assert_called_once_with(
-            "movie", "18", 7.5, 9.0, min_release_year=2001
+            "movie", "18", 7.5, 9.0, min_release_year=2001, include_streaming=False
         )
         self.assertContains(response, "Filme teste")
         self.assertContains(response, "Trailer")
@@ -171,9 +223,78 @@ class MovieViewTests(TestCase):
         self.assertContains(response, "120 min")
         self.assertContains(response, 'class="quick-facts"')
         self.assertContains(response, 'href="https://example.com/watch/movie"')
-        self.assertEqual(Title.objects.count(), 1)
-        self.assertEqual(Generation.objects.count(), 1)
-        self.assertEqual(Generation.objects.get().genre_name, "Drama")
+        self.assertContains(response, 'data-has-backdrop="true"')
+        self.assertContains(response, 'data-hero-backdrop')
+        self.assertContains(response, "backdrop-teste.jpg")
+        rendered = response.content.decode()
+        self.assertLess(rendered.index('class="session-panel"'), rendered.index('class="result-section'))
+        self.assertLess(rendered.index('class="result-section'), rendered.index('class="discovery-copy"'))
+        self.assertLess(rendered.index('class="discovery-copy"'), rendered.index('class="trends-section"'))
+
+    @patch("movies.views.get_random_title")
+    @patch("movies.views.get_genres", return_value=[])
+    def test_generate_passes_advanced_movie_filters(self, _mock_genres, mock_random):
+        mock_random.return_value = None
+
+        response = self.client.post(
+            reverse("movies:generate_movie"),
+            {
+                "media_type": "movie",
+                "runtime_filter": "up_to_90",
+                "certification": "14",
+                "genre_id": "special:korean_thriller",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        mock_random.assert_called_once_with(
+            "movie",
+            None,
+            6.0,
+            10.0,
+            min_release_year=1900,
+            include_streaming=False,
+            runtime_filter="up_to_90",
+            certification="14",
+            special_category="korean_thriller",
+        )
+        self.assertContains(response, '<option value="up_to_90" selected>')
+        self.assertContains(response, '<option value="14" selected>')
+        self.assertContains(response, '<option value="special:korean_thriller" selected>')
+
+    @patch("movies.views.get_random_title")
+    @patch("movies.views.get_genres", return_value=[])
+    def test_series_ignores_movie_certification_and_accepts_dorama(self, _mock_genres, mock_random):
+        mock_random.return_value = None
+
+        response = self.client.post(
+            reverse("movies:generate_movie"),
+            {
+                "media_type": "tv",
+                "runtime_filter": "90_to_120",
+                "certification": "18",
+                "genre_id": "special:korean_drama",
+            },
+        )
+
+        mock_random.assert_called_once_with(
+            "tv",
+            None,
+            6.0,
+            10.0,
+            min_release_year=1900,
+            include_streaming=False,
+            runtime_filter="90_to_120",
+            special_category="korean_drama",
+        )
+        self.assertContains(
+            response,
+            'class="field certification-field" data-movie-only hidden',
+        )
+        self.assertContains(
+            response,
+            'select id="certification" name="certification" disabled',
+        )
 
     @patch("movies.views.get_random_title", side_effect=TMDBError("Falha controlada"))
     @patch("movies.views.get_genres", side_effect=TMDBError("Falha nos gêneros"))
@@ -187,6 +308,53 @@ class MovieViewTests(TestCase):
 
     @patch("movies.views.get_random_title")
     @patch("movies.views.get_genres", return_value=[])
+    def test_anonymous_generation_is_kept_out_of_database(
+        self, _mock_genres, mock_random
+    ):
+        mock_random.return_value = {
+            "id": 77,
+            "title": "Filme no navegador",
+            "media_type": "movie",
+            "vote_average": 7.7,
+            "reviews": [],
+            "provider_groups": [],
+            "credit_sections": [],
+        }
+
+        response = self.client.post(
+            reverse("movies:generate_movie"),
+            {"media_type": "movie", "min_rating": "6.5"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Title.objects.exists())
+        self.assertFalse(Generation.objects.exists())
+        self.assertContains(response, 'id="anonymous-history-item"')
+        self.assertContains(response, "Filme no navegador")
+
+    def test_anonymous_home_does_not_read_legacy_generation_history(self):
+        visitor_id = uuid.uuid4()
+        session = self.client.session
+        session["visitor_id"] = str(visitor_id)
+        session.save()
+        title = Title.objects.create(
+            tmdb_id=78,
+            media_type=Title.MOVIE,
+            name="Historico antigo",
+        )
+        Generation.objects.create(
+            visitor_id=visitor_id,
+            title=title,
+            min_rating=6.0,
+        )
+
+        response = self.client.get(reverse("movies:home"))
+
+        self.assertNotContains(response, "Historico antigo")
+        self.assertContains(response, "data-browser-history-list")
+
+    @patch("movies.views.get_random_title")
+    @patch("movies.views.get_genres", return_value=[])
     def test_invalid_filters_are_normalised(self, _mock_genres, mock_random):
         mock_random.return_value = {"title": "Filme", "reviews": [], "provider_groups": []}
 
@@ -197,7 +365,7 @@ class MovieViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_random.assert_called_once_with(
-            "movie", None, 6.0, 10.0, min_release_year=1900
+            "movie", None, 6.0, 10.0, min_release_year=1900, include_streaming=False
         )
 
     @patch("movies.views.get_random_title")
@@ -223,7 +391,7 @@ class MovieViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_random.assert_called_once_with(
-            "tv", "10765", 6.1, 8.7, min_release_year=1900
+            "tv", "10765", 6.1, 8.7, min_release_year=1900, include_streaming=False
         )
         self.assertContains(response, 'value="tv" data-media-input')
         self.assertContains(response, "Série teste")
@@ -245,7 +413,7 @@ class MovieViewTests(TestCase):
         )
 
         mock_random.assert_called_once_with(
-            "movie", None, 8.4, 8.4, min_release_year=1900
+            "movie", None, 8.4, 8.4, min_release_year=1900, include_streaming=False
         )
 
     @patch("movies.views.get_random_title")
@@ -271,6 +439,7 @@ class MovieViewTests(TestCase):
             6.0,
             10.0,
             min_release_year=timezone.localdate().year,
+            include_streaming=False,
         )
 
     def test_favorite_can_be_added_and_removed_only_from_visitor_history(self):
@@ -343,6 +512,38 @@ class MovieViewTests(TestCase):
         self.assertNotContains(response, 'class="hero"')
         self.assertFalse(Title.objects.filter(tmdb_id=88, media_type="movie").exists())
         self.assertNotIn("sessionid", self.client.cookies)
+        mock_details.assert_called_once_with("movie", 88, include_streaming=False)
+
+    @patch("movies.views.get_streaming_groups")
+    def test_streaming_links_are_returned_as_json(self, mock_streaming):
+        mock_streaming.return_value = [
+            {
+                "key": "sub",
+                "label": "Incluso na assinatura",
+                "providers": [
+                    {
+                        "provider_name": "Stream Teste",
+                        "web_url": "https://example.com/watch/88",
+                    }
+                ],
+            }
+        ]
+
+        response = self.client.get(
+            reverse("movies:streaming_links", args=("movie", 88))
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["groups"][0]["key"], "sub")
+        self.assertEqual(response["Cache-Control"], "private, max-age=21600")
+        mock_streaming.assert_called_once_with("movie", 88)
+
+    def test_streaming_links_reject_invalid_media_type(self):
+        response = self.client.get(
+            reverse("movies:streaming_links", args=("invalid", 88))
+        )
+
+        self.assertEqual(response.status_code, 400)
 
     @patch("movies.views.get_title_details")
     def test_favorite_post_persists_a_title_not_seen_before(self, mock_details):

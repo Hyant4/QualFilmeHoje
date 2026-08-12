@@ -25,7 +25,8 @@ from .watchmode import WatchmodeError, get_streaming_groups
 API_BASE_URL = "https://api.themoviedb.org/3"
 POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500"
 BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/w1280"
-DISCOVERY_CACHE_SECONDS = 10 * 60
+DISCOVERY_CACHE_SECONDS = 30 * 60
+GENRES_CACHE_SECONDS = 7 * 24 * 60 * 60
 TITLE_CACHE_SECONDS = 12 * 60 * 60
 TITLE_NOT_FOUND_CACHE_SECONDS = 30 * 60
 TRENDS_CACHE_SECONDS = 30 * 60
@@ -85,6 +86,10 @@ def _get(path, **params):
 def get_genres(media_type="movie"):
     if media_type not in {"movie", "tv"}:
         media_type = "movie"
+    cache_key = f"tmdb:genres:v1:{media_type}:pt-BR"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
     raw_genres = _get(f"/genre/{media_type}/list", language="pt-BR").get("genres")
     genres = []
     for genre in _as_list(raw_genres):
@@ -94,6 +99,7 @@ def get_genres(media_type="movie"):
         name = _safe_text(genre.get("name"), maximum=100)
         if genre_id and name:
             genres.append({"id": genre_id, "name": name})
+    cache.set(cache_key, genres, GENRES_CACHE_SECONDS)
     return genres
 
 
@@ -595,14 +601,90 @@ def get_upcoming_movies(limit=10):
     return _get_movie_release_list("upcoming", limit)
 
 
+RUNTIME_FILTERS = {
+    "up_to_90": (None, 90),
+    "90_to_120": (90, 120),
+    "over_120": (120, None),
+}
+
+SPECIAL_CATEGORIES = {
+    "movie": {
+        "korean_thriller": {
+            "label": "Thriller coreano",
+            "with_origin_country": "KR",
+            "with_original_language": "ko",
+            "with_genres": "53",
+        },
+        "korean_romance": {
+            "label": "Romance coreano",
+            "with_origin_country": "KR",
+            "with_original_language": "ko",
+            "with_genres": "10749",
+        },
+        "anime": {
+            "label": "Anime",
+            "with_origin_country": "JP",
+            "with_original_language": "ja",
+            "with_genres": "16",
+        },
+        "japanese_horror": {
+            "label": "Terror japonês",
+            "with_origin_country": "JP",
+            "with_original_language": "ja",
+            "with_genres": "27",
+        },
+        "brazilian_cinema": {
+            "label": "Cinema brasileiro",
+            "with_origin_country": "BR",
+            "with_original_language": "pt",
+        },
+    },
+    "tv": {
+        "korean_drama": {
+            "label": "Dorama coreano",
+            "with_origin_country": "KR",
+            "with_original_language": "ko",
+            "with_genres": "18",
+        },
+        "anime": {
+            "label": "Anime",
+            "with_origin_country": "JP",
+            "with_original_language": "ja",
+            "with_genres": "16",
+        },
+        "brazilian_drama": {
+            "label": "Drama brasileiro",
+            "with_origin_country": "BR",
+            "with_original_language": "pt",
+            "with_genres": "18",
+        },
+    },
+}
+
+BRAZIL_CERTIFICATIONS = {"L", "10", "12", "14", "16", "18"}
+
+
 def _discovery_cache_key(
-    media_type, genre_id, min_rating, max_rating, min_release_year=None
+    media_type,
+    genre_id,
+    min_rating,
+    max_rating,
+    min_release_year=None,
+    runtime_filter=None,
+    certification=None,
+    special_category=None,
 ):
     genre_key = genre_id or "all"
     min_key = f"{min_rating:.1f}".replace(".", "-")
     max_key = f"{max_rating:.1f}".replace(".", "-")
     year_key = min_release_year or "all"
-    return f"tmdb:discover:v3:{media_type}:{genre_key}:{min_key}:{max_key}:{year_key}"
+    runtime_key = runtime_filter or "any"
+    certification_key = certification or "any"
+    category_key = special_category or "any"
+    return (
+        f"tmdb:discover:v4:{media_type}:{genre_key}:{min_key}:{max_key}:"
+        f"{year_key}:{runtime_key}:{certification_key}:{category_key}"
+    )
 
 
 def _find_streaming_candidate(media_type, candidates):
@@ -643,10 +725,25 @@ def _load_discovery_page(
     max_rating,
     filters,
     min_release_year=None,
+    runtime_filter=None,
+    certification=None,
+    special_category=None,
 ):
     cache_key = _discovery_cache_key(
-        media_type, genre_id, min_rating, max_rating, min_release_year
+        media_type,
+        genre_id,
+        min_rating,
+        max_rating,
+        min_release_year,
+        runtime_filter,
+        certification,
+        special_category,
     )
+    pool_cache_key = f"{cache_key}:candidate-pool"
+    cached_pool = cache.get(pool_cache_key)
+    if cached_pool is not None:
+        return cached_pool
+
     first_page = cache.get(cache_key)
     if first_page is None:
         first_page = _get(f"/discover/{media_type}", page=1, **filters)
@@ -667,12 +764,30 @@ def _load_discovery_page(
         total_pages = 1
     total_pages = min(max(total_pages, 1), 500)
     if total_pages == 1:
+        cache.set(pool_cache_key, first_results, DISCOVERY_CACHE_SECONDS)
         return first_results
 
-    page_data = _get(
-        f"/discover/{media_type}", page=random.randint(1, total_pages), **filters
-    )
-    return _discovery_candidates(page_data.get("results")) or first_results
+    page_number = random.randint(1, total_pages)
+    page_cache_key = f"{cache_key}:page:{page_number}"
+    page_data = cache.get(page_cache_key)
+    if page_data is None:
+        page_data = _get(
+            f"/discover/{media_type}", page=page_number, **filters
+        )
+        cache.set(page_cache_key, page_data, DISCOVERY_CACHE_SECONDS)
+
+    candidates = first_results + _discovery_candidates(page_data.get("results"))
+    unique_candidates = []
+    seen_ids = set()
+    for candidate in candidates:
+        title_id = candidate["id"]
+        if title_id in seen_ids:
+            continue
+        seen_ids.add(title_id)
+        unique_candidates.append(candidate)
+    candidate_pool = unique_candidates or first_results
+    cache.set(pool_cache_key, candidate_pool, DISCOVERY_CACHE_SECONDS)
+    return candidate_pool
 
 
 def get_random_title(
@@ -681,6 +796,11 @@ def get_random_title(
     min_rating=0,
     max_rating=10,
     min_release_year=None,
+    *,
+    include_streaming=True,
+    runtime_filter=None,
+    certification=None,
+    special_category=None,
 ):
     if media_type not in {"movie", "tv"}:
         media_type = "movie"
@@ -711,6 +831,13 @@ def get_random_title(
                 if 1 <= parsed_genre_id <= MAX_TMDB_ID
                 else None
             )
+    runtime_filter = runtime_filter if runtime_filter in RUNTIME_FILTERS else None
+    certification = str(certification or "").strip().upper()
+    if media_type != "movie" or certification not in BRAZIL_CERTIFICATIONS:
+        certification = None
+    category_filters = SPECIAL_CATEGORIES.get(media_type, {}).get(special_category)
+    if category_filters is None:
+        special_category = None
     filters = {
         "language": "pt-BR",
         "include_adult": "false",
@@ -727,8 +854,25 @@ def get_random_title(
             filters["primary_release_date.gte"] = f"{min_release_year}-01-01"
     elif min_release_year is not None:
         filters["first_air_date.gte"] = f"{min_release_year}-01-01"
+    if category_filters:
+        filters.update({key: value for key, value in category_filters.items() if key != "label"})
+    category_genre = filters.get("with_genres")
     if genre_id:
-        filters["with_genres"] = genre_id
+        filters["with_genres"] = (
+            f"{genre_id},{category_genre}" if category_genre and category_genre != genre_id else genre_id
+        )
+    if runtime_filter:
+        runtime_min, runtime_max = RUNTIME_FILTERS[runtime_filter]
+        if runtime_min is not None:
+            filters["with_runtime.gte"] = runtime_min
+        if runtime_max is not None:
+            filters["with_runtime.lte"] = runtime_max
+    if certification:
+        filters.update({
+            "region": "BR",
+            "certification_country": "BR",
+            "certification": certification,
+        })
 
     results = _load_discovery_page(
         media_type,
@@ -737,11 +881,18 @@ def get_random_title(
         max_rating,
         filters,
         min_release_year,
+        runtime_filter,
+        certification,
+        special_category,
     )
     candidates = random.sample(
         results, k=min(MAX_STREAMING_CANDIDATES, len(results))
     )
     first_title_id = candidates[0]["id"]
+
+    if not include_streaming:
+        data = _fetch_title_extras(first_title_id, media_type)
+        return _build_title_payload(data, media_type)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         first_details_future = executor.submit(

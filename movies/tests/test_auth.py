@@ -67,6 +67,9 @@ class AuthenticationTests(TestCase):
         self.assertContains(signup_response, "Nome de usuário")
         self.assertContains(signup_response, "Confirme a senha")
         self.assertContains(signup_response, "link para confirmar seu e-mail")
+        self.assertContains(signup_response, "Use pelo menos 12 caracteres")
+        self.assertContains(signup_response, "Palavra!Filme27Lugar")
+        self.assertContains(signup_response, "não copie este exemplo")
 
     def test_email_signup_requires_confirmation_before_authentication(self):
         response = self.client.post(

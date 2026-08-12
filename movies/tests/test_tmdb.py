@@ -8,6 +8,7 @@ from django.utils import timezone
 from movies.services.tmdb import (
     TMDBError,
     get_now_playing_movies,
+    get_genres,
     get_random_movie,
     get_random_title,
     get_recent_top_movies,
@@ -20,6 +21,18 @@ from movies.services.tmdb import (
 class TMDBServiceTests(SimpleTestCase):
     def setUp(self):
         cache.clear()
+        get_genres.cache_clear()
+
+    @patch("movies.services.tmdb._get")
+    def test_genres_use_shared_cache_between_process_local_caches(self, mock_get):
+        mock_get.return_value = {"genres": [{"id": 18, "name": "Drama"}]}
+
+        first = get_genres("movie")
+        get_genres.cache_clear()
+        second = get_genres("movie")
+
+        self.assertEqual(first, second)
+        mock_get.assert_called_once_with("/genre/movie/list", language="pt-BR")
 
     @patch("movies.services.tmdb._get")
     def test_recent_top_movies_are_normalised_and_limited(self, mock_get):
@@ -266,6 +279,78 @@ class TMDBServiceTests(SimpleTestCase):
 
     @patch("movies.services.tmdb.get_streaming_groups", return_value=[])
     @patch("movies.services.tmdb._get")
+    def test_movie_advanced_filters_are_combined_in_one_discover_call(
+        self, mock_get, _mock_streaming
+    ):
+        def response(path, **params):
+            if path == "/discover/movie":
+                return {"total_pages": 1, "total_results": 1, "results": [{"id": 42}]}
+            if path == "/movie/42":
+                return {
+                    "id": 42,
+                    "title": "Suspense curto",
+                    "videos": {"results": []},
+                    "reviews": {"results": []},
+                    "credits": {"crew": [], "cast": []},
+                }
+            if path.endswith(("/videos", "/reviews")):
+                return {"results": []}
+            raise AssertionError(f"Chamada inesperada: {path} {params}")
+
+        mock_get.side_effect = response
+        get_random_title(
+            "movie",
+            runtime_filter="up_to_90",
+            certification="14",
+            special_category="korean_thriller",
+        )
+
+        discover_call = next(call for call in mock_get.call_args_list if call.args[0] == "/discover/movie")
+        self.assertEqual(discover_call.kwargs["with_runtime.lte"], 90)
+        self.assertNotIn("with_runtime.gte", discover_call.kwargs)
+        self.assertEqual(discover_call.kwargs["certification_country"], "BR")
+        self.assertEqual(discover_call.kwargs["certification"], "14")
+        self.assertEqual(discover_call.kwargs["region"], "BR")
+        self.assertEqual(discover_call.kwargs["with_origin_country"], "KR")
+        self.assertEqual(discover_call.kwargs["with_original_language"], "ko")
+        self.assertEqual(discover_call.kwargs["with_genres"], "53")
+
+    @patch("movies.services.tmdb.get_streaming_groups", return_value=[])
+    @patch("movies.services.tmdb._get")
+    def test_dorama_combines_category_and_selected_genre(self, mock_get, _mock_streaming):
+        def response(path, **params):
+            if path == "/discover/tv":
+                return {"total_pages": 1, "total_results": 1, "results": [{"id": 7}]}
+            if path == "/tv/7":
+                return {
+                    "id": 7,
+                    "name": "Dorama teste",
+                    "videos": {"results": []},
+                    "reviews": {"results": []},
+                    "aggregate_credits": {"crew": [], "cast": []},
+                }
+            if path.endswith(("/videos", "/reviews")):
+                return {"results": []}
+            raise AssertionError(f"Chamada inesperada: {path} {params}")
+
+        mock_get.side_effect = response
+        get_random_title(
+            "tv",
+            genre_id="10749",
+            runtime_filter="90_to_120",
+            certification="18",
+            special_category="korean_drama",
+        )
+
+        discover_call = next(call for call in mock_get.call_args_list if call.args[0] == "/discover/tv")
+        self.assertEqual(discover_call.kwargs["with_genres"], "10749,18")
+        self.assertEqual(discover_call.kwargs["with_origin_country"], "KR")
+        self.assertEqual(discover_call.kwargs["with_runtime.gte"], 90)
+        self.assertEqual(discover_call.kwargs["with_runtime.lte"], 120)
+        self.assertNotIn("certification", discover_call.kwargs)
+
+    @patch("movies.services.tmdb.get_streaming_groups", return_value=[])
+    @patch("movies.services.tmdb._get")
     def test_series_uses_tv_endpoints_and_normalises_fields(
         self, mock_get, mock_streaming
     ):
@@ -386,3 +471,4 @@ class TMDBServiceTests(SimpleTestCase):
             if call.args[0] == "/discover/movie" and call.kwargs["page"] == 1
         ]
         self.assertEqual(len(first_page_calls), 1)
+        self.assertEqual(mock_get.call_count, 2)

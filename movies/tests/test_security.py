@@ -43,7 +43,10 @@ class InputValidationTests(SimpleTestCase):
             },
         )
 
-        self.assertEqual(_parse_filters(request), ("movie", "", 6.0, 10.0, 1900))
+        self.assertEqual(
+            _parse_filters(request),
+            ("movie", "", 6.0, 10.0, 1900, "", "", ""),
+        )
 
 
 class ApplicationRateLimitTests(SimpleTestCase):

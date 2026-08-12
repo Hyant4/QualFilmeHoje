@@ -1,12 +1,12 @@
 {% load static %}
 {% static 'movies/images/og-qualfilmehoje.png' as og_image %}
-{% static 'movies/images/hero-pov.webp' as hero_image %}
+{% static 'movies/images/hero-session-focus.webp' as hero_image %}
 <!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0e0a0a">
+  <meta name="theme-color" content="#09090b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   {% if is_detail_page and movie %}
@@ -31,7 +31,9 @@
   <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="preload" as="image" href="{{ hero_image }}" type="image/webp">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
   <script src="{% static 'movies/js/site.js' %}" defer></script>
   {% if seo_json_ld %}<script type="application/ld+json">{{ seo_json_ld|safe }}</script>{% endif %}
@@ -41,9 +43,11 @@
     <div class="wrap">
       <nav class="nav" aria-label="Navegação principal">
         <a href="{% url 'movies:home' %}" class="brand-logo" aria-label="QualFilmeHoje — início">
-          <img src="{% static 'movies/images/logo-q.png' %}" alt="QualFilmeHoje" width="48" height="48">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48" aria-hidden="true">
+          <span class="brand-name" aria-hidden="true">ualFilmeHoje</span>
         </a>
         <div class="nav-actions">
+          <a href="{% url 'movies:favorites' %}" class="nav-list-link">Minha lista</a>
           {% if user.is_authenticated %}
             {% firstof user.get_full_name user.username user.email as account_name %}
             <span class="user-summary" title="{{ account_name }}">
@@ -57,7 +61,7 @@
           {% else %}
             <a href="{% url 'account_login' %}" class="nav-account">Entrar</a>
           {% endif %}
-          <a href="{% if is_detail_page or is_content_page %}{% url 'movies:home' %}#gerador{% else %}#gerador{% endif %}" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
+          <a href="{% if is_detail_page or is_content_page %}{% url 'movies:home' %}#gerador{% else %}#gerador{% endif %}" class="nav-cta">Sortear agora</a>
         </div>
       </nav>
     </div>
@@ -92,33 +96,49 @@
     {% if not is_detail_page and not is_content_page %}
     <section class="hero" id="gerador">
       <div class="wrap">
-        <div class="hero-grid">
+        <div class="hero-stage">
           <div class="hero-intro">
-            <p class="eyebrow">Sessão de hoje · Brasil</p>
+            <p class="eyebrow">Menos catálogo. Mais filme.</p>
             <h1><span class="hero-title-main">Qual <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></span><em>assistir hoje?</em></h1>
             <div class="hero-copy">
-              <p>Sem rolar catálogo por meia hora. Use o sorteador de filmes e séries, escolha um gênero e a nota desejada — a gente encontra a sua próxima sessão.</p>
-              <p class="hero-note"><span></span> Filmes e séries disponíveis para assistir no Brasil</p>
+              <p>Você escolhe o clima. O QualFilmeHoje encontra uma opção para dar o play.</p>
+              <p class="hero-note"><span></span> Filmes e séries disponíveis no Brasil</p>
             </div>
           </div>
-          <figure class="hero-media">
-            <img src="{{ hero_image }}" alt="Pessoa no sofá apontando o controle para uma televisão" width="1536" height="1024" fetchpriority="high">
-            <span class="tv-screen-glow" aria-hidden="true"></span>
-            <figcaption class="tv-screen-ui">
-              <span class="tv-wordmark" aria-label="QualFilmeHoje">
-                <img src="{% static 'movies/images/logo-q.png' %}" alt="Logo do QualFilmeHoje" width="32" height="32" aria-hidden="true">
-                <strong aria-hidden="true">ualFilmeHoje</strong>
-              </span>
-              <span class="tv-loader" aria-hidden="true"></span>
-              <small>Escolhendo sua sessão</small>
-            </figcaption>
+          <figure class="hero-media" data-hero-media>
+            <img class="hero-room" src="{{ hero_image }}" alt="Pessoa vista de costas em uma sala escura diante da televisão" width="1536" height="1024" fetchpriority="high">
+            <span class="hero-tv-screen" data-hero-tv-screen{% if movie.backdrop_url %} data-has-backdrop="true"{% endif %}>
+              {% if movie.backdrop_url %}<img src="{{ movie.backdrop_url }}" alt="" width="1280" height="720" decoding="async" data-hero-backdrop>{% endif %}
+              <span class="tv-screen-glow" aria-hidden="true"></span>
+              <span class="tv-projector-sweep" aria-hidden="true"></span>
+              <figcaption class="tv-screen-ui{% if movie.backdrop_url %} tv-screen-ui--caption{% endif %}">
+                {% if movie.backdrop_url %}
+                  <small>Agora na tela</small>
+                  <strong>{{ movie.title }}</strong>
+                {% else %}
+                  <span class="tv-wordmark" aria-label="QualFilmeHoje">
+                    <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="32" height="32" aria-hidden="true">
+                    <strong aria-hidden="true">ualFilmeHoje</strong>
+                  </span>
+                  <small>Pronto para a próxima sessão</small>
+                {% endif %}
+              </figcaption>
+            </span>
           </figure>
         </div>
 
-        <div class="media-picker" role="tablist" aria-label="Tipo de conteúdo">
-          <button type="button" role="tab" aria-controls="genre-movie" aria-selected="{% if selected_media_type != 'tv' %}true{% else %}false{% endif %}" data-media-option="movie">Filmes</button>
-          <button type="button" role="tab" aria-controls="genre-tv" aria-selected="{% if selected_media_type == 'tv' %}true{% else %}false{% endif %}" data-media-option="tv">Séries</button>
-        </div>
+          <aside class="session-panel" aria-labelledby="session-panel-title">
+            <div class="session-panel-heading">
+              <div>
+                <p class="eyebrow">Seu filtro</p>
+                <h2 id="session-panel-title">Escolha sua sessão</h2>
+                <p>Ajuste só o que importa. Qualquer campo pode ficar aberto.</p>
+              </div>
+            <div class="media-picker" role="tablist" aria-label="Tipo de conteúdo">
+              <button type="button" role="tab" aria-controls="genre-movie" aria-selected="{% if selected_media_type != 'tv' %}true{% else %}false{% endif %}" data-media-option="movie">Filme</button>
+              <button type="button" role="tab" aria-controls="genre-tv" aria-selected="{% if selected_media_type == 'tv' %}true{% else %}false{% endif %}" data-media-option="tv">Série</button>
+            </div>
+            </div>
 
         <form class="generator" method="post" action="{% url 'movies:generate_movie' %}" data-generator-form>
           {% csrf_token %}
@@ -131,6 +151,11 @@
                 {% for genre in movie_genres %}
                   <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
                 {% endfor %}
+                <optgroup label="Categorias especiais">
+                  {% for value, label in movie_special_categories %}
+                    <option value="special:{{ value }}" {% if selected_special_category == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </optgroup>
               </select>
             </div>
           </div>
@@ -143,6 +168,11 @@
                 {% for genre in tv_genres %}
                   <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
                 {% endfor %}
+                <optgroup label="Categorias especiais">
+                  {% for value, label in tv_special_categories %}
+                    <option value="special:{{ value }}" {% if selected_special_category == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </optgroup>
               </select>
             </div>
           </div>
@@ -208,43 +238,37 @@
           </div>
 
           <button class="generate-button" type="submit" data-generate-button>
-            <span class="button-label">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></span>
+            <span class="button-label">Sortear agora</span>
             <span aria-hidden="true">→</span>
           </button>
-        </form>
 
+          <div class="advanced-filters" aria-label="Mais filtros">
+            <div class="field">
+              <label for="runtime_filter">Duração</label>
+              <div class="select-wrap">
+                <select id="runtime_filter" name="runtime_filter">
+                  {% for value, label in runtime_options %}
+                    <option value="{{ value }}" {% if selected_runtime_filter == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <div class="field certification-field" data-movie-only {% if selected_media_type == 'tv' %}hidden{% endif %}>
+              <label for="certification">Classificação indicativa</label>
+              <div class="select-wrap">
+                <select id="certification" name="certification" {% if selected_media_type == 'tv' %}disabled{% endif %}>
+                  {% for value, label in certification_options %}
+                    <option value="{{ value }}" {% if selected_certification == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+          </aside>
       </div>
     </section>
-    {% endif %}
-
-    {% if not is_detail_page and not is_content_page %}
-      <section class="discovery-copy" aria-labelledby="discovery-title">
-        <div class="wrap discovery-layout">
-          <div class="discovery-intro">
-            <p class="eyebrow">Escolha sem perder tempo</p>
-            <h2 id="discovery-title">Um sorteador para decidir qual filme assistir hoje</h2>
-            <p>O QualFilmeHoje transforma a indecisão em uma escolha simples. Em vez de percorrer vários catálogos, você define o tipo de conteúdo, o gênero, o ano de lançamento e a faixa de notas. O gerador seleciona um título e reúne as informações necessárias para você decidir se vale a pena dar o play.</p>
-            <a class="text-link discovery-link" href="{% url 'movies:random_movies' %}">Entenda como funciona o sorteador de filmes aleatórios →</a>
-          </div>
-          <div class="discovery-points">
-            <article>
-              <span class="mono">01</span>
-              <h3>Filmes aleatórios com critérios</h3>
-              <p>O resultado é aleatório dentro dos filtros escolhidos. Assim, você mantém a surpresa sem receber uma opção totalmente fora do seu interesse.</p>
-            </article>
-            <article>
-              <span class="mono">02</span>
-              <h3>Informações para decidir</h3>
-              <p>Consulte sinopse, nota da comunidade, trailer, direção, roteiro e elenco principal antes de escolher sua próxima sessão.</p>
-            </article>
-            <article>
-              <span class="mono">03</span>
-              <h3>Onde assistir no Brasil</h3>
-              <p>Quando houver disponibilidade informada pelos parceiros, a ficha mostra opções de streaming, aluguel ou compra para o título sorteado.</p>
-            </article>
-          </div>
-        </div>
-      </section>
     {% endif %}
 
     {% if is_content_page %}
@@ -322,7 +346,10 @@
     {% endif %}
 
     {% if movie %}
-      <section class="result-section" id="resultado" data-movie-result>
+      <section class="result-section{% if not is_detail_page %} result-section--generated{% endif %}" id="resultado" data-movie-result>
+        {% if not user.is_authenticated and anonymous_history_item %}
+          {{ anonymous_history_item|json_script:"anonymous-history-item" }}
+        {% endif %}
         {% if movie.backdrop_url %}
           <div class="backdrop" aria-hidden="true"><img src="{{ movie.backdrop_url }}" alt="Imagem de fundo de {{ movie.title }}"></div>
         {% endif %}
@@ -341,6 +368,9 @@
                     <span data-favorite-label>{% if movie.is_favorite %}Na minha lista{% else %}Adicionar à minha lista{% endif %}</span>
                   </button>
                   <small class="favorite-feedback" aria-live="polite" data-favorite-feedback></small>
+                  {% if not user.is_authenticated %}
+                    <small class="favorite-account-hint">Crie uma conta para manter seus favoritos salvos no perfil.</small>
+                  {% endif %}
                 </form>
               {% endif %}
             </div>
@@ -443,7 +473,13 @@
                 </div>
 
                 <div class="tab-panel" id="panel-streaming" role="tabpanel" aria-labelledby="tab-streaming" data-panel="streaming" hidden>
-                  {% if movie.provider_groups %}
+                  {% if movie.streaming_deferred %}
+                    <div class="streaming-loader" data-streaming-loader data-streaming-url="{% url 'movies:streaming_links' movie.media_type movie.id %}" aria-live="polite">
+                      <span class="streaming-spinner" aria-hidden="true"></span>
+                      <p>Buscando onde assistir no Brasil…</p>
+                      <span class="streaming-skeletons" aria-hidden="true"><i></i><i></i><i></i></span>
+                    </div>
+                  {% elif movie.provider_groups %}
                     <div class="provider-groups">
                       {% for group in movie.provider_groups %}
                         <section class="provider-group">
@@ -472,17 +508,48 @@
     {% endif %}
 
     {% if not is_detail_page and not is_content_page %}
+      <section class="discovery-copy" aria-labelledby="discovery-title">
+        <div class="wrap discovery-layout">
+          <div class="discovery-intro">
+            <p class="eyebrow">Uma escolha, sem maratona de menus</p>
+            <h2 id="discovery-title">Do filtro ao play sem abrir cinco catálogos.</h2>
+            <p>Você define os limites. O QualFilmeHoje escolhe um título e reúne o que importa para decidir.</p>
+            <a class="text-link discovery-link" href="{% url 'movies:random_movies' %}">Como funciona o sorteio de filmes →</a>
+          </div>
+          <div class="discovery-points">
+            <article>
+              <span aria-hidden="true">◇</span>
+              <h3>Surpresa com critério</h3>
+              <p>Tipo, gênero, ano e nota mantêm o sorteio perto do que você quer ver.</p>
+            </article>
+            <article>
+              <span aria-hidden="true">▷</span>
+              <h3>Tudo para decidir</h3>
+              <p>Sinopse, nota, trailer, elenco e onde assistir em uma ficha só.</p>
+            </article>
+            <article>
+              <span aria-hidden="true">●</span>
+              <h3>Feito para o Brasil</h3>
+              <p>Streaming, aluguel ou compra quando os parceiros informarem disponibilidade.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if not is_detail_page and not is_content_page %}
       <section class="trends-section" aria-labelledby="trends-title" data-trends>
         <div class="wrap">
           <div class="section-head trends-head">
             <div>
               <p class="eyebrow">Em alta agora</p>
-              <h2 id="trends-title">Tendências</h2>
-              <p class="trends-description">Top 10 dos filmes lançados nos últimos 30 dias com as melhores notas da comunidade TMDB.</p>
+              <h2 id="trends-title">Os 10 filmes em alta</h2>
+              <p class="trends-description">Lançados nos últimos 30 dias e ordenados pela nota da comunidade TMDB.</p>
             </div>
             {% if trending_movies|length > 1 %}
               <div class="trends-controls" aria-label="Controles das tendências">
                 <button type="button" aria-label="Ver filmes anteriores" data-trends-prev>←</button>
+                <button type="button" class="trends-toggle" aria-label="Pausar rotação automática" aria-pressed="false" data-trends-toggle>Pausar</button>
                 <button type="button" aria-label="Ver próximos filmes" data-trends-next>→</button>
               </div>
             {% endif %}
@@ -511,7 +578,7 @@
                 {% endfor %}
               </div>
             </div>
-            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+            <p class="trends-hint">Deslize para explorar</p>
           {% else %}
             <div class="trends-empty">
               <span class="mono">TENDÊNCIAS INDISPONÍVEIS</span>
@@ -526,12 +593,13 @@
           <div class="section-head trends-head">
             <div>
               <p class="eyebrow">Em alta agora</p>
-              <h2 id="series-trends-title">Top 10 séries</h2>
-              <p class="trends-description">As séries lançadas nos últimos 30 dias com as melhores notas da comunidade TMDB.</p>
+              <h2 id="series-trends-title">As 10 séries em alta</h2>
+              <p class="trends-description">Lançadas nos últimos 30 dias e ordenadas pela nota da comunidade TMDB.</p>
             </div>
             {% if trending_series|length > 1 %}
               <div class="trends-controls" aria-label="Controles das tendências de séries">
                 <button type="button" aria-label="Ver séries anteriores" data-trends-prev>←</button>
+                <button type="button" class="trends-toggle" aria-label="Pausar rotação automática" aria-pressed="false" data-trends-toggle>Pausar</button>
                 <button type="button" aria-label="Ver próximas séries" data-trends-next>→</button>
               </div>
             {% endif %}
@@ -560,7 +628,7 @@
                 {% endfor %}
               </div>
             </div>
-            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+            <p class="trends-hint">Deslize para explorar</p>
           {% else %}
             <div class="trends-empty">
               <span class="mono">SÉRIES INDISPONÍVEIS</span>
@@ -581,6 +649,7 @@
             {% if now_playing_movies|length > 1 %}
               <div class="trends-controls" aria-label="Controles dos filmes nos cinemas">
                 <button type="button" aria-label="Ver filmes anteriores em cartaz" data-trends-prev>←</button>
+                <button type="button" class="trends-toggle" aria-label="Pausar rotação automática" aria-pressed="false" data-trends-toggle>Pausar</button>
                 <button type="button" aria-label="Ver próximos filmes em cartaz" data-trends-next>→</button>
               </div>
             {% endif %}
@@ -610,7 +679,7 @@
                 {% endfor %}
               </div>
             </div>
-            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+            <p class="trends-hint">Deslize para explorar</p>
           {% else %}
             <div class="trends-empty">
               <span class="mono">PROGRAMAÇÃO INDISPONÍVEL</span>
@@ -631,6 +700,7 @@
             {% if upcoming_movies|length > 1 %}
               <div class="trends-controls" aria-label="Controles dos próximos lançamentos">
                 <button type="button" aria-label="Ver estreias anteriores" data-trends-prev>←</button>
+                <button type="button" class="trends-toggle" aria-label="Pausar rotação automática" aria-pressed="false" data-trends-toggle>Pausar</button>
                 <button type="button" aria-label="Ver próximas estreias" data-trends-next>→</button>
               </div>
             {% endif %}
@@ -659,7 +729,7 @@
                 {% endfor %}
               </div>
             </div>
-            <p class="trends-hint mono">Arraste ou use as setas · rotação automática</p>
+            <p class="trends-hint">Deslize para explorar</p>
           {% else %}
             <div class="trends-empty">
               <span class="mono">ESTREIAS INDISPONÍVEIS</span>
@@ -684,40 +754,15 @@
     
 
     {% if not is_detail_page and not is_content_page %}
-    {% if favorites or history %}
-      <section class="library-section" id="minha-lista" aria-labelledby="library-title">
+    {% if history or not user.is_authenticated %}
+      <section class="library-section" aria-labelledby="library-title" data-library-section{% if not history %} hidden{% endif %}>
         <div class="wrap">
           <div class="section-head library-head">
-            <div><p class="eyebrow">Seu espaço</p><h2 id="library-title">Minha lista</h2></div>
+            <div><p class="eyebrow">Sua sessão recente</p><h2 id="library-title">Últimos sorteios</h2></div>
             <span class="mono">{% if user.is_authenticated %}Salvo na sua conta{% else %}Salvo neste navegador{% endif %}</span>
           </div>
 
           <div class="library-columns">
-            {% if favorites %}
-              <section class="library-group" aria-labelledby="favorites-title">
-                <div class="library-group-heading">
-                  <h3 id="favorites-title">Títulos salvos</h3>
-                  <span class="mono">{{ favorites|length|stringformat:'02d' }}</span>
-                </div>
-                <div class="title-cards">
-                  {% for favorite in favorites %}
-                    <a class="title-card" href="{% url 'movies:title_detail' favorite.title.media_type favorite.title.tmdb_id %}" data-favorite-card="{{ favorite.title.media_type }}:{{ favorite.title.tmdb_id }}">
-                      {% if favorite.title.poster_url %}
-                        <img src="{{ favorite.title.poster_url }}" alt="Pôster de {{ favorite.title.name }}" loading="lazy">
-                      {% else %}
-                        <div class="title-card-placeholder" aria-hidden="true">Q</div>
-                      {% endif %}
-                      <div>
-                        <span class="mono">{% if favorite.title.media_type == 'tv' %}Série{% else %}Filme{% endif %}{% if favorite.title.release_year %} · {{ favorite.title.release_year }}{% endif %}</span>
-                        <h4>{{ favorite.title.name }}</h4>
-                        {% if favorite.title.vote_average is not None %}<small><i aria-hidden="true">★</i> {{ favorite.title.vote_average }}/10</small>{% endif %}
-                      </div>
-                    </a>
-                  {% endfor %}
-                </div>
-              </section>
-            {% endif %}
-
             {% if history %}
               <section class="library-group" aria-labelledby="history-title">
                 <div class="library-group-heading">
@@ -733,6 +778,16 @@
                     </a></li>
                   {% endfor %}
                 </ol>
+              </section>
+            {% endif %}
+
+            {% if not user.is_authenticated %}
+              <section class="library-group" aria-labelledby="browser-history-title" data-browser-history-group hidden>
+                <div class="library-group-heading">
+                  <h3 id="browser-history-title">Ultimos sorteios</h3>
+                  <span class="mono" data-browser-history-count>00</span>
+                </div>
+                <ol class="history-list" data-browser-history-list></ol>
               </section>
             {% endif %}
           </div>

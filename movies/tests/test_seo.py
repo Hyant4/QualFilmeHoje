@@ -202,6 +202,7 @@ class SEOMetadataTests(TestCase):
         title = re.search(r"<title>(.*?)</title>", html).group(1)
         self.assertLessEqual(len(title), 59)
         self.assertEqual(len(re.findall(r"<h1(?:\s|>)", html)), 1)
+        mock_details.assert_called_once_with("movie", 88, include_streaming=False)
         self.assertContains(
             response,
             'alt="Imagem de fundo de Um filme com um nome deliberadamente muito longo para SEO"',

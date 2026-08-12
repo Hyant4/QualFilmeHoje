@@ -11,6 +11,7 @@ from .urls import TMDB_IMAGE_HOSTS, safe_https_url
 
 HISTORY_DISPLAY_LIMIT = 8
 HISTORY_STORAGE_LIMIT = 50
+FAVORITES_PAGE_LIMIT = 100
 
 
 def _parse_date(value):
@@ -119,28 +120,49 @@ def record_generation(
     return title
 
 
-def get_library(visitor_id, *, user=None):
+def get_library(visitor_id, *, user=None, include_favorites=True):
     account_user = _account_user(user)
     if not visitor_id and not account_user:
         return {"history": [], "favorites": []}
 
-    generation_filter = {"user": account_user} if account_user else {
-        "visitor_id": visitor_id,
-        "user__isnull": True,
-    }
     favorite_filter = {"user": account_user} if account_user else {
         "visitor_id": visitor_id,
         "user__isnull": True,
     }
-    history = list(
-        Generation.objects.filter(**generation_filter)
-        .select_related("title")[:HISTORY_DISPLAY_LIMIT]
+    history = (
+        list(
+            Generation.objects.filter(user=account_user)
+            .select_related("title")[:HISTORY_DISPLAY_LIMIT]
+        )
+        if account_user
+        else []
     )
-    favorites = list(
-        Favorite.objects.filter(**favorite_filter)
-        .select_related("title")[:HISTORY_DISPLAY_LIMIT]
+    favorites = (
+        list(
+            Favorite.objects.filter(**favorite_filter)
+            .select_related("title")[:HISTORY_DISPLAY_LIMIT]
+        )
+        if include_favorites
+        else []
     )
     return {"history": history, "favorites": favorites}
+
+
+def get_favorites(visitor_id, *, user=None):
+    """Retorna a coleção da página Minha lista em uma única consulta."""
+
+    account_user = _account_user(user)
+    if not visitor_id and not account_user:
+        return []
+    favorite_filter = (
+        {"user": account_user}
+        if account_user
+        else {"visitor_id": visitor_id, "user__isnull": True}
+    )
+    return list(
+        Favorite.objects.filter(**favorite_filter)
+        .select_related("title")[:FAVORITES_PAGE_LIMIT]
+    )
 
 
 def is_favorite(visitor_id, title, *, user=None):

@@ -1,0 +1,114 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="Sua lista de filmes e séries salvos no QualFilmeHoje.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <title>Minha lista | QualFilmeHoje</title>
+  <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
+</head>
+<body class="favorites-page">
+  <header class="site-header">
+    <div class="wrap">
+      <nav class="nav" aria-label="Navegação principal">
+        <a href="{% url 'movies:home' %}" class="brand-logo" aria-label="QualFilmeHoje — início">
+          <img src="{% static 'movies/images/logo-q.png' %}" alt="" width="48" height="48" aria-hidden="true">
+          <span class="brand-name" aria-hidden="true">ualFilmeHoje</span>
+        </a>
+        <div class="nav-actions">
+          <a href="{% url 'movies:favorites' %}" class="nav-list-link" aria-current="page">Minha lista</a>
+          {% if user.is_authenticated %}
+            <form method="post" action="{% url 'account_logout' %}" class="nav-logout-form">
+              {% csrf_token %}
+              <button type="submit" class="nav-account nav-logout">Sair</button>
+            </form>
+          {% else %}
+            <a href="{% url 'account_login' %}" class="nav-account">Entrar</a>
+          {% endif %}
+          <a href="{% url 'movies:home' %}#gerador" class="nav-cta">Sortear agora</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="favorites-main">
+    <header class="favorites-hero wrap">
+      <div>
+        <p class="eyebrow">Sua seleção</p>
+        <h1>Minha lista</h1>
+        <p>Filmes e séries que você guardou para decidir depois.</p>
+      </div>
+      <span class="favorites-count mono">{{ favorites|length|stringformat:'02d' }} títulos</span>
+    </header>
+
+    <section class="favorites-shelf wrap" aria-labelledby="saved-titles-heading">
+      <h2 id="saved-titles-heading" class="visually-hidden">Títulos salvos</h2>
+      {% if not user.is_authenticated %}
+        <aside class="account-save-note">
+          <div>
+            <strong>Leve sua lista com você.</strong>
+            <p>Crie uma conta gratuita para manter seus favoritos salvos no perfil e acessá-los em outros dispositivos.</p>
+          </div>
+          <a href="{% url 'account_signup' %}">Criar conta <span aria-hidden="true">→</span></a>
+        </aside>
+      {% endif %}
+
+      {% if favorites %}
+        <div class="favorites-grid">
+          {% for favorite in favorites %}
+            <article class="favorite-poster-card" data-favorite-card="{{ favorite.title.media_type }}:{{ favorite.title.tmdb_id }}">
+              <a href="{% url 'movies:title_detail' favorite.title.media_type favorite.title.tmdb_id %}" aria-label="Abrir {{ favorite.title.name }}">
+                <div class="favorite-poster-frame">
+                  {% if favorite.title.poster_url %}
+                    <img src="{{ favorite.title.poster_url }}" alt="Pôster de {{ favorite.title.name }}" loading="lazy" width="500" height="750">
+                  {% else %}
+                    <span class="favorite-poster-placeholder" aria-hidden="true">Q</span>
+                  {% endif %}
+                  <span class="favorite-type">{% if favorite.title.media_type == 'tv' %}Série{% else %}Filme{% endif %}</span>
+                </div>
+                <div class="favorite-ticket">
+                  <div>
+                    <h3>{{ favorite.title.name }}</h3>
+                    <p>{% if favorite.title.release_year %}{{ favorite.title.release_year }}{% else %}Ano não informado{% endif %}</p>
+                  </div>
+                  {% if favorite.title.vote_average is not None %}
+                    <span class="favorite-rating"><i aria-hidden="true">★</i> {{ favorite.title.vote_average }}</span>
+                  {% endif %}
+                </div>
+              </a>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="favorites-empty">
+          <span aria-hidden="true">☆</span>
+          <h2>Sua lista ainda está vazia</h2>
+          <p>Ao encontrar um título interessante, use “Adicionar à minha lista”.</p>
+          <a class="primary-link" href="{% url 'movies:home' %}#gerador">Sortear um título</a>
+        </div>
+      {% endif %}
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <a href="{% url 'movies:home' %}" class="brand-logo brand-logo-footer" aria-label="QualFilmeHoje — início">
+        <img src="{% static 'movies/images/logo-q.png' %}" alt="QualFilmeHoje" width="48" height="48">
+      </a>
+      <div class="footer-links">
+        <a href="{% url 'movies:home' %}#gerador" class="text-link">Sortear agora</a>
+        <a href="{% url 'movies:privacy' %}" class="text-link">Privacidade</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
