@@ -14,6 +14,7 @@ sitemaps = {
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("filmes-aleatorios/", views.random_movies, name="random_movies"),
     path("robots.txt", views.robots_txt, name="robots_txt"),
     path(
         f"{settings.INDEXNOW_KEY}.txt",

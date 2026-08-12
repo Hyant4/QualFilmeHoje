@@ -56,7 +56,7 @@ button, a { touch-action: manipulation; }
 .hero h1 { margin: 14px 0 0; font-size: clamp(4rem, 7.2vw, 7rem); font-weight: 600; letter-spacing: -0.035em; line-height: 0.88; text-transform: uppercase; }
 .hero-title-main, .hero h1 em { display: block; }
 .hero-title-main { white-space: nowrap; }
-.hero h1 em { margin-top: 0.04em; color: transparent; font-style: normal; -webkit-text-stroke: 1px var(--gold); }
+.hero h1 em { margin-top: 0.08em; color: transparent; font-size: 0.62em; font-style: normal; letter-spacing: -0.02em; white-space: nowrap; -webkit-text-stroke: 1px var(--gold); }
 .hero-copy { max-width: 430px; margin-top: 34px; }
 .hero-copy > p:first-child { margin: 0; color: var(--muted); font-size: 1.05rem; }
 .hero-note { display: flex; align-items: center; gap: 8px; margin: 22px 0 0; color: var(--cream); font-size: 0.78rem; }
@@ -258,6 +258,40 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
 .history-list time { color: #756164; font-size: 0.56rem; }
 
 .how-it-works { padding: 76px 0; }
+.discovery-copy { padding: 76px 0; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(92, 27, 34, 0.08), transparent); }
+.discovery-layout { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(44px, 7vw, 92px); }
+.discovery-intro h2 { max-width: 520px; margin: 12px 0 20px; font-size: clamp(2.3rem, 5vw, 4.1rem); font-weight: 600; letter-spacing: -0.02em; line-height: 0.98; text-transform: uppercase; }
+.discovery-intro > p:not(.eyebrow) { max-width: 610px; margin: 0; color: #cbbdb2; font-size: 0.94rem; line-height: 1.8; }
+.discovery-link { display: inline-block; margin-top: 22px; }
+.discovery-points { border-top: 1px solid var(--line); }
+.discovery-points article { position: relative; padding: 20px 8px 22px 48px; border-bottom: 1px solid var(--line); }
+.discovery-points article > span { position: absolute; top: 23px; left: 4px; color: var(--gold); font-size: 0.62rem; }
+.discovery-points h3 { margin: 0 0 7px; color: var(--cream); font-size: 1rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+.discovery-points p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.65; }
+
+.content-page { background: radial-gradient(circle at 82% 8%, rgba(92, 27, 34, 0.22), transparent 34%), var(--bg); }
+.guide-hero { padding: 78px 0 72px; border-bottom: 1px solid var(--line); }
+.guide-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 0.42fr); align-items: end; gap: clamp(44px, 8vw, 110px); }
+.guide-hero h1 { max-width: 850px; margin: 14px 0 22px; font-size: clamp(3.5rem, 8vw, 7rem); font-weight: 600; letter-spacing: -0.035em; line-height: 0.9; text-transform: uppercase; }
+.guide-hero-grid > div > p:not(.eyebrow) { max-width: 760px; margin: 0; color: #cbbdb2; font-size: 1rem; line-height: 1.8; }
+.guide-summary { padding: 24px; border: 1px solid var(--line); background: rgba(24, 17, 18, 0.8); }
+.guide-summary > span { color: var(--gold); font-size: 0.64rem; letter-spacing: 0.08em; }
+.guide-summary ol { display: grid; gap: 13px; margin: 20px 0 0; padding: 0; counter-reset: guide-summary; list-style: none; }
+.guide-summary li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; color: #d1c4b9; font-size: 0.8rem; }
+.guide-summary li::before { color: var(--gold); font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; content: "0" counter(list-item); }
+.guide-content { padding: 24px 0 88px; }
+.guide-document { max-width: 980px; }
+.guide-document > section { padding: 48px 0; border-bottom: 1px solid var(--line); }
+.guide-document h2 { max-width: 780px; margin: 10px 0 20px; font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 600; line-height: 1; text-transform: uppercase; }
+.guide-document section > p:not(.eyebrow) { max-width: 820px; margin: 12px 0 0; color: #cbbdb2; font-size: 0.94rem; line-height: 1.82; }
+.guide-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--line); }
+.guide-cards article { min-height: 180px; padding: 24px; }
+.guide-cards article + article { border-left: 1px solid var(--line); }
+.guide-cards h3 { margin: 0 0 12px; color: var(--gold-soft); font-size: 1rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+.guide-cards p { margin: 0; color: var(--muted); font-size: 0.82rem; line-height: 1.7; }
+.guide-document > .guide-cta { display: flex; align-items: end; justify-content: space-between; gap: 36px; padding-bottom: 0; border-bottom: 0; }
+.guide-cta h2 { margin-bottom: 12px; }
+.guide-cta .primary-link { flex: 0 0 auto; margin: 0; }
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
 .section-head h2 { margin: 8px 0 0; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 600; line-height: 1; text-transform: uppercase; }
 .section-head > span { color: var(--muted); font-size: 0.7rem; }
@@ -357,6 +391,9 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
   .user-copy { display: none; }
   .auth-layout { grid-template-columns: minmax(0, 1fr) minmax(350px, 430px); gap: 42px; }
   .auth-intro h1 { font-size: clamp(3.7rem, 8vw, 5.4rem); }
+  .discovery-layout { grid-template-columns: 1fr; gap: 38px; }
+  .guide-hero-grid { grid-template-columns: 1fr; gap: 34px; }
+  .guide-summary { max-width: 520px; }
 }
 
 @media (max-width: 680px) {
@@ -461,6 +498,17 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
   .steps article + article { border-top: 1px solid var(--line); border-left: 0; }
   .steps h3 { margin-top: 15px; }
   .how-it-works { padding: 56px 0; }
+  .discovery-copy { padding: 56px 0; }
+  .discovery-intro h2 { font-size: 2.5rem; }
+  .discovery-points article { padding-left: 42px; }
+  .guide-hero { padding: 52px 0 48px; }
+  .guide-hero h1 { font-size: clamp(3.15rem, 14.5vw, 4.7rem); overflow-wrap: anywhere; }
+  .guide-content { padding-bottom: 58px; }
+  .guide-document > section { padding: 38px 0; }
+  .guide-cards { grid-template-columns: 1fr; }
+  .guide-cards article { min-height: 0; }
+  .guide-cards article + article { border-top: 1px solid var(--line); border-left: 0; }
+  .guide-document > .guide-cta { align-items: flex-start; flex-direction: column; gap: 24px; }
   .site-footer { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
   .credits { flex-direction: column; }
   .title-cards { grid-template-columns: 1fr; }

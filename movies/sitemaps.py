@@ -25,7 +25,7 @@ class CanonicalSitemap(Sitemap):
 class StaticSitemap(CanonicalSitemap):
 
     def items(self):
-        return ("movies:home",)
+        return ("movies:home", "movies:random_movies")
 
     def location(self, item):
         return reverse(item)

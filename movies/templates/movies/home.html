@@ -12,22 +12,22 @@
   {% if is_detail_page and movie %}
   <meta name="description" content="Veja sinopse, trailer, avaliação, elenco e onde assistir {{ movie.title }} no Brasil.">
   {% else %}
-  <meta name="description" content="Use o gerador gratuito para escolher filmes e séries por gênero, nota e ano e descubra onde assistir no Brasil.">
+  <meta name="description" content="{{ seo_description }}">
   {% endif %}
   <meta name="robots" content="{% if seo_noindex_override %}noindex, nofollow{% else %}{{ seo_robots }}{% endif %}">
   {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
   {% if bing_site_verification %}<meta name="msvalidate.01" content="{{ bing_site_verification }}">{% endif %}
   <link rel="canonical" href="{{ canonical_url }}">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}">
-  <meta property="og:description" content="{% if is_detail_page and movie %}Sinopse, trailer, avaliação, elenco e onde assistir no Brasil.{% else %}Escolha o clima. A gente escolhe o filme ou a série.{% endif %}">
+  <meta property="og:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}{{ seo_title }}{% endif %}">
+  <meta property="og:description" content="{% if is_detail_page and movie %}Sinopse, trailer, avaliação, elenco e onde assistir no Brasil.{% else %}{{ seo_description }}{% endif %}">
   <meta property="og:url" content="{{ canonical_url }}">
   <meta property="og:image" content="{{ site_url }}{{ og_image }}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}">
-  <meta name="twitter:description" content="{% if is_detail_page and movie %}Sinopse, trailer, avaliação, elenco e onde assistir no Brasil.{% else %}Escolha o clima. A gente escolhe o filme ou a série.{% endif %}">
+  <meta name="twitter:title" content="{% if is_detail_page and movie %}{{ movie.title }} | QualFilmeHoje{% else %}{{ seo_title }}{% endif %}">
+  <meta name="twitter:description" content="{% if is_detail_page and movie %}Sinopse, trailer, avaliação, elenco e onde assistir no Brasil.{% else %}{{ seo_description }}{% endif %}">
   <meta name="twitter:image" content="{{ site_url }}{{ og_image }}">
-  <title>{% if is_detail_page and movie %}{{ movie.title|truncatechars:43 }} | QualFilmeHoje{% else %}Gerador de filmes e séries para assistir hoje | QualFilmeHoje{% endif %}</title>
+  <title>{% if is_detail_page and movie %}{{ movie.title|truncatechars:43 }} | QualFilmeHoje{% else %}{{ seo_title }}{% endif %}</title>
   <link rel="icon" type="image/png" sizes="256x256" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'movies/images/logo-q.png' %}">
   <link rel="preload" as="image" href="{{ hero_image }}" type="image/webp">
@@ -36,7 +36,7 @@
   <script src="{% static 'movies/js/site.js' %}" defer></script>
   {% if seo_json_ld %}<script type="application/ld+json">{{ seo_json_ld|safe }}</script>{% endif %}
 </head>
-<body class="{% if error %}has-top-alert {% endif %}{% if is_detail_page %}detail-page{% endif %}">
+<body class="{% if error %}has-top-alert {% endif %}{% if is_detail_page %}detail-page{% endif %}{% if is_content_page %}content-page{% endif %}">
   <header class="site-header">
     <div class="wrap">
       <nav class="nav" aria-label="Navegação principal">
@@ -57,7 +57,7 @@
           {% else %}
             <a href="{% url 'account_login' %}" class="nav-account">Entrar</a>
           {% endif %}
-          <a href="{% if is_detail_page %}{% url 'movies:home' %}#gerador{% else %}#gerador{% endif %}" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
+          <a href="{% if is_detail_page or is_content_page %}{% url 'movies:home' %}#gerador{% else %}#gerador{% endif %}" class="nav-cta">Sortear <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></a>
         </div>
       </nav>
     </div>
@@ -89,15 +89,15 @@
       </div>
     {% endif %}
 
-    {% if not is_detail_page %}
+    {% if not is_detail_page and not is_content_page %}
     <section class="hero" id="gerador">
       <div class="wrap">
         <div class="hero-grid">
           <div class="hero-intro">
             <p class="eyebrow">Sessão de hoje · Brasil</p>
-            <h1><span class="hero-title-main">Qual <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></span><em>hoje?</em></h1>
+            <h1><span class="hero-title-main">Qual <span data-media-noun data-movie="filme" data-tv="série">{% if selected_media_type == 'tv' %}série{% else %}filme{% endif %}</span></span><em>assistir hoje?</em></h1>
             <div class="hero-copy">
-              <p>Sem rolar catálogo por meia hora. Escolha um gênero e a nota mínima — a gente encontra a sua próxima sessão.</p>
+              <p>Sem rolar catálogo por meia hora. Use o sorteador de filmes e séries, escolha um gênero e a nota desejada — a gente encontra a sua próxima sessão.</p>
               <p class="hero-note"><span></span> Filmes e séries disponíveis para assistir no Brasil</p>
             </div>
           </div>
@@ -215,6 +215,110 @@
 
       </div>
     </section>
+    {% endif %}
+
+    {% if not is_detail_page and not is_content_page %}
+      <section class="discovery-copy" aria-labelledby="discovery-title">
+        <div class="wrap discovery-layout">
+          <div class="discovery-intro">
+            <p class="eyebrow">Escolha sem perder tempo</p>
+            <h2 id="discovery-title">Um sorteador para decidir qual filme assistir hoje</h2>
+            <p>O QualFilmeHoje transforma a indecisão em uma escolha simples. Em vez de percorrer vários catálogos, você define o tipo de conteúdo, o gênero, o ano de lançamento e a faixa de notas. O gerador seleciona um título e reúne as informações necessárias para você decidir se vale a pena dar o play.</p>
+            <a class="text-link discovery-link" href="{% url 'movies:random_movies' %}">Entenda como funciona o sorteador de filmes aleatórios →</a>
+          </div>
+          <div class="discovery-points">
+            <article>
+              <span class="mono">01</span>
+              <h3>Filmes aleatórios com critérios</h3>
+              <p>O resultado é aleatório dentro dos filtros escolhidos. Assim, você mantém a surpresa sem receber uma opção totalmente fora do seu interesse.</p>
+            </article>
+            <article>
+              <span class="mono">02</span>
+              <h3>Informações para decidir</h3>
+              <p>Consulte sinopse, nota da comunidade, trailer, direção, roteiro e elenco principal antes de escolher sua próxima sessão.</p>
+            </article>
+            <article>
+              <span class="mono">03</span>
+              <h3>Onde assistir no Brasil</h3>
+              <p>Quando houver disponibilidade informada pelos parceiros, a ficha mostra opções de streaming, aluguel ou compra para o título sorteado.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if is_content_page %}
+      <section class="guide-hero" aria-labelledby="guide-title">
+        <div class="wrap guide-hero-grid">
+          <div>
+            <p class="eyebrow">Escolha rápida · sem catálogo infinito</p>
+            <h1 id="guide-title">Sorteador de filmes aleatórios</h1>
+            <p>Encontre um filme para assistir sem depender de uma lista pronta. Você escolhe os critérios; o QualFilmeHoje faz o sorteio e apresenta uma opção com sinopse, trailer, avaliação e disponibilidade no Brasil.</p>
+            <a class="primary-link" href="{% url 'movies:home' %}#gerador">Sortear um filme agora</a>
+          </div>
+          <aside class="guide-summary" aria-label="Resumo do sorteador">
+            <span class="mono">COMO COMEÇAR</span>
+            <ol>
+              <li>Escolha filme ou série.</li>
+              <li>Defina gênero, ano e notas.</li>
+              <li>Receba uma sugestão aleatória.</li>
+            </ol>
+          </aside>
+        </div>
+      </section>
+
+      <section class="guide-content" aria-label="Guia do sorteador de filmes">
+        <div class="wrap guide-document">
+          <section aria-labelledby="guide-how-title">
+            <p class="eyebrow">Como funciona</p>
+            <h2 id="guide-how-title">Filmes aleatórios, mas dentro do seu gosto</h2>
+            <p>Um filme completamente aleatório pode ser divertido, mas também pode ignorar aquilo que você realmente quer assistir. Por isso, o sorteador do QualFilmeHoje combina surpresa com filtros. Você pode deixar todos os gêneros disponíveis ou escolher ação, comédia, drama, terror, romance e outras categorias. Também é possível limitar o ano de lançamento e selecionar uma faixa de notas da comunidade do TMDB.</p>
+            <p>Depois do sorteio, a página mostra uma ficha do título. Ela reúne a sinopse, a duração quando disponível, os principais profissionais envolvidos, avaliações da comunidade, trailer e serviços nos quais o filme pode ser encontrado. Se a primeira sugestão não combinar com o momento, basta voltar ao gerador e sortear novamente.</p>
+          </section>
+
+          <section aria-labelledby="guide-filters-title">
+            <p class="eyebrow">Filtros úteis</p>
+            <h2 id="guide-filters-title">Como escolher os critérios do sorteio</h2>
+            <div class="guide-cards">
+              <article>
+                <h3>Gênero</h3>
+                <p>Use quando você já sabe o clima da sessão. Deixe “qualquer gênero” para receber uma escolha mais imprevisível.</p>
+              </article>
+              <article>
+                <h3>Ano mínimo</h3>
+                <p>Ajuda a separar clássicos de lançamentos recentes. Um intervalo amplo aumenta a variedade de títulos disponíveis.</p>
+              </article>
+              <article>
+                <h3>Notas mínima e máxima</h3>
+                <p>Permitem controlar a faixa de avaliação sem limitar o resultado apenas aos filmes mais populares ou mais bem avaliados.</p>
+              </article>
+            </div>
+          </section>
+
+          <section aria-labelledby="guide-when-title">
+            <p class="eyebrow">Quando usar</p>
+            <h2 id="guide-when-title">Uma ajuda para a noite de cinema</h2>
+            <p>O sorteio é útil quando muitas opções estão causando indecisão, quando duas pessoas não conseguem escolher juntas ou quando você quer sair das recomendações repetidas de uma única plataforma. Ele também pode ajudar a explorar um gênero novo, revisitar filmes antigos ou montar uma lista para assistir mais tarde.</p>
+            <p>O QualFilmeHoje não cria vídeos e não substitui os catálogos dos serviços de streaming. A proposta é recomendar um título existente e concentrar os dados que ajudam na decisão. As informações de filmes e séries vêm do TMDB; a disponibilidade pode mudar conforme a região, o plano e o catálogo de cada serviço.</p>
+          </section>
+
+          <section aria-labelledby="guide-difference-title">
+            <p class="eyebrow">Escolha informada</p>
+            <h2 id="guide-difference-title">Qual a diferença entre sorteio e recomendação?</h2>
+            <p>Uma recomendação tradicional tenta prever o que você vai gostar com base no seu histórico. O sorteador trabalha de outra maneira: primeiro respeita os filtros definidos por você e, depois, escolhe uma opção dentro desse conjunto. Isso reduz a repetição e mantém o usuário no controle dos critérios.</p>
+            <p>Se quiser guardar a sugestão, use “Minha lista”. Também é possível abrir a ficha completa do título para conferir o trailer e as opções de onde assistir antes de sair do site.</p>
+          </section>
+
+          <section class="guide-cta" aria-labelledby="guide-cta-title">
+            <div>
+              <p class="eyebrow">Sua próxima sessão</p>
+              <h2 id="guide-cta-title">Pronto para descobrir um filme?</h2>
+              <p>Escolha seus filtros e deixe o sorteador reduzir as opções a uma única sugestão.</p>
+            </div>
+            <a class="primary-link" href="{% url 'movies:home' %}#gerador">Ir para o gerador</a>
+          </section>
+        </div>
+      </section>
     {% endif %}
 
     {% if movie %}
@@ -367,7 +471,7 @@
       </section>
     {% endif %}
 
-    {% if not is_detail_page %}
+    {% if not is_detail_page and not is_content_page %}
       <section class="trends-section" aria-labelledby="trends-title" data-trends>
         <div class="wrap">
           <div class="section-head trends-head">
@@ -579,7 +683,7 @@
 
     
 
-    {% if not is_detail_page %}
+    {% if not is_detail_page and not is_content_page %}
     {% if favorites or history %}
       <section class="library-section" id="minha-lista" aria-labelledby="library-title">
         <div class="wrap">
@@ -659,8 +763,9 @@
           <img src="{% static 'movies/images/logo-q.png' %}" alt="QualFilmeHoje" width="48" height="48">
         </a>
         <div class="footer-links">
+          <a href="{% url 'movies:random_movies' %}" class="text-link">Filmes aleatórios</a>
           <a href="{% url 'movies:privacy' %}" class="text-link">Privacidade</a>
-          <a href="{% if is_detail_page %}#resultado{% else %}#gerador{% endif %}" class="text-link">Voltar ao topo ↑</a>
+          <a href="{% if is_detail_page %}#resultado{% elif is_content_page %}#guide-title{% else %}#gerador{% endif %}" class="text-link">Voltar ao topo ↑</a>
         </div>
       </div>
       <div class="credits">

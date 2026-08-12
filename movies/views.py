@@ -245,6 +245,18 @@ def privacy(request):
     return render(request, "movies/privacy.html")
 
 
+@require_GET
+def random_movies(request):
+    return render(
+        request,
+        "movies/home.html",
+        {
+            "is_content_page": True,
+            "selected_media_type": "movie",
+        },
+    )
+
+
 def home(request):
     genre_sets, error, rows, row_errors = _safe_landing_data()
     current_year = timezone.localdate().year

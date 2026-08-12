@@ -61,6 +61,10 @@ class SEOEndpointsTests(TestCase):
         locations = [node.text for node in root.findall("s:url/s:loc", namespace)]
         self.assertIn(f"{CANONICAL_SITE}/", locations)
         self.assertIn(
+            f"{CANONICAL_SITE}{reverse('movies:random_movies')}",
+            locations,
+        )
+        self.assertIn(
             f"{CANONICAL_SITE}{reverse('movies:title_detail', args=(title.media_type, title.tmdb_id))}",
             locations,
         )
@@ -80,7 +84,7 @@ class SEOMetadataTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "Gerador de filmes e séries para assistir hoje | QualFilmeHoje",
+            "Qual filme assistir hoje? | QualFilmeHoje",
         )
         self.assertContains(
             response,
@@ -110,6 +114,55 @@ class SEOMetadataTests(TestCase):
         self.assertEqual(app["offers"]["price"], "0")
         self.assertEqual(app["offers"]["priceCurrency"], "BRL")
         self.assertNotIn("[Website URL]", json.dumps(payload))
+
+        html = response.content.decode()
+        self.assertEqual(len(re.findall(r"<h1(?:\s|>)", html)), 1)
+        self.assertContains(
+            response,
+            f'href="{reverse("movies:random_movies")}"',
+        )
+
+    def test_random_movies_page_has_unique_metadata_content_and_schema(self):
+        path = reverse("movies:random_movies")
+        response = self.client.get(path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Sorteador de filmes aleatórios | QualFilmeHoje",
+        )
+        self.assertContains(
+            response,
+            f'<link rel="canonical" href="{CANONICAL_SITE}{path}">',
+        )
+        self.assertContains(response, '<meta name="robots" content="index, follow">')
+        self.assertContains(response, "Filmes aleatórios, mas dentro do seu gosto")
+        self.assertContains(
+            response,
+            f'href="{reverse("movies:home")}#gerador"',
+        )
+
+        html = response.content.decode()
+        self.assertEqual(len(re.findall(r"<h1(?:\s|>)", html)), 1)
+        title = re.search(r"<title>(.*?)</title>", html).group(1)
+        self.assertLessEqual(len(title), 60)
+        description = re.search(
+            r'<meta name="description" content="(.*?)">',
+            html,
+        ).group(1)
+        self.assertGreaterEqual(len(description), 120)
+        self.assertLessEqual(len(description), 160)
+
+        match = re.search(
+            r'<script type="application/ld\+json">(.*?)</script>',
+            html,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        payload = json.loads(match.group(1))
+        self.assertEqual(payload["@type"], "WebPage")
+        self.assertEqual(payload["url"], f"{CANONICAL_SITE}{path}")
+        self.assertEqual(payload["mainEntity"]["@type"], "WebApplication")
 
     def test_privacy_and_account_pages_are_noindex(self):
         privacy = self.client.get(reverse("movies:privacy"))
