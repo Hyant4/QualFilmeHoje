@@ -278,19 +278,21 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 4px s
 .account-save-note a { flex: 0 0 auto; color: var(--gold); font-size: 0.76rem; font-weight: 700; text-decoration: none; }
 .favorites-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(18px, 2.4vw, 32px); }
 .favorite-poster-card { min-width: 0; }
-.favorite-poster-card > a { display: block; text-decoration: none; }
+.favorite-poster-card > a { display: block; text-decoration: none; transition: transform 180ms ease; }
 .favorite-poster-frame { position: relative; overflow: hidden; aspect-ratio: 2 / 3; background: #100c0d; }
 .favorite-poster-frame img { width: 100%; height: 100%; object-fit: cover; transition: filter 180ms ease, transform 220ms ease; }
 .favorite-poster-placeholder { width: 100%; height: 100%; display: grid; place-items: center; color: var(--gold); font-family: "Archivo Black", sans-serif; font-size: 4rem; }
 .favorite-type { position: absolute; top: 12px; left: 12px; padding: 5px 8px; background: rgba(9, 9, 11, 0.88); color: var(--cream); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; }
-.favorite-ticket { position: relative; display: flex; align-items: start; justify-content: space-between; gap: 12px; min-height: 78px; margin: -1px 10px 0; padding: 14px 12px; background: var(--cream); color: #181214; }
+.favorite-ticket { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: start; gap: 12px; min-height: 78px; margin: -1px 10px 0; padding: 14px 12px; background: var(--cream); color: #181214; }
 .favorite-ticket::before, .favorite-ticket::after { position: absolute; top: -6px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); content: ""; }
 .favorite-ticket::before { left: -6px; }
 .favorite-ticket::after { right: -6px; }
-.favorite-ticket h3 { overflow: hidden; margin: 0; font-family: "Atkinson Hyperlegible", sans-serif; font-size: 0.9rem; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.favorite-ticket-copy { min-width: 0; }
+.favorite-ticket h3 { display: -webkit-box; overflow: hidden; margin: 0; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-family: "Atkinson Hyperlegible", sans-serif; font-size: 0.9rem; line-height: 1.2; overflow-wrap: anywhere; }
 .favorite-ticket p { margin: 5px 0 0; color: #6f6262; font-size: 0.68rem; }
-.favorite-rating { flex: 0 0 auto; color: #3a2b10; font-size: 0.72rem; font-weight: 700; }
+.favorite-rating { align-self: start; white-space: nowrap; color: #3a2b10; font-size: 0.72rem; font-weight: 700; }
 .favorite-rating i { color: #bf8300; font-style: normal; }
+.favorite-poster-card a:hover { transform: translateY(-3px); }
 .favorite-poster-card a:hover .favorite-poster-frame img { filter: brightness(1.08); transform: scale(1.025); }
 .favorite-poster-card a:hover .favorite-ticket { background: var(--gold-soft); }
 .favorites-empty { max-width: 580px; margin: 40px auto 0; padding: 56px 24px; text-align: center; }
