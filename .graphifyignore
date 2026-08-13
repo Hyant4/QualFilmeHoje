@@ -1,0 +1,14 @@
+.git/
+.venv/
+node_modules/
+dist/
+build/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+.env.*
+*.sqlite3
+*.db
+graphify-out/

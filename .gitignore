@@ -138,6 +138,13 @@ ENV/
 env.bak/
 venv.bak/
 
+# Graphify local cache and machine-specific markers
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.needs_update
+graphify-out/cost.json
+
 # Spyder project settings
 .spyderproject
 .spyproject
