@@ -10,6 +10,7 @@ from movies.services.http_client import (
 )
 from movies.services.library import save_title_snapshot
 from movies.services.tmdb import _choose_trailer, _normalise_reviews
+from movies.services.tmdb_client import TMDBError, fetch_json
 from movies.services.urls import STREAMING_HOSTS, safe_https_url
 from movies.services.watchmode import WatchmodeError, get_streaming_groups
 
@@ -42,6 +43,14 @@ class _Response:
 
 
 class ExternalHTTPTests(SimpleTestCase):
+    @patch.dict("os.environ", {"TMDB_ACCESS_TOKEN": "test-token"})
+    @patch("movies.services.tmdb_client.open_json")
+    def test_tmdb_client_rejects_paths_outside_the_provider_api(self, open_json_mock):
+        with self.assertRaises(TMDBError):
+            fetch_json("https://attacker.example/collect")
+
+        open_json_mock.assert_not_called()
+
     def test_redirects_are_not_followed_with_api_credentials(self):
         request = Request(
             "https://api.example.test/resource",

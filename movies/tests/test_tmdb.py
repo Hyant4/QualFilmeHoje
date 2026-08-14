@@ -7,8 +7,8 @@ from django.utils import timezone
 
 from movies.services.tmdb import (
     TMDBError,
-    get_now_playing_movies,
     get_genres,
+    get_now_playing_movies,
     get_random_movie,
     get_random_title,
     get_recent_top_movies,

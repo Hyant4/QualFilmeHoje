@@ -1,13 +1,13 @@
 import uuid
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from movies.models import Favorite, Generation, Title
-from movies.services.tmdb import TMDBError
+from movies.services.tmdb import TMDBError, TMDBNotFound
+from movies.tests.factories import create_title, create_user, tmdb_title_payload
 
 
 class MovieViewTests(TestCase):
@@ -16,7 +16,7 @@ class MovieViewTests(TestCase):
         session = self.client.session
         session["visitor_id"] = str(visitor_id)
         session.save()
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=321,
             media_type="movie",
             name="Filme guardado",
@@ -35,12 +35,12 @@ class MovieViewTests(TestCase):
         self.assertContains(response, "poster.jpg")
 
     def test_authenticated_favorites_page_uses_profile_list_without_signup_note(self):
-        user = get_user_model().objects.create_user(
+        user = create_user(
             username="colecionador",
             email="colecionador@example.com",
             password="CinemaPortfolio2026!",
         )
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=654,
             media_type="tv",
             name="Série do perfil",
@@ -114,6 +114,7 @@ class MovieViewTests(TestCase):
         response = self.client.get(reverse("movies:home"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<script type="module" src="/static/movies/js/site.js"></script>')
         self.assertContains(response, 'data-media-option="movie"')
         self.assertContains(response, 'type="range"')
         self.assertContains(response, 'step="0.1"')
@@ -311,15 +312,11 @@ class MovieViewTests(TestCase):
     def test_anonymous_generation_is_kept_out_of_database(
         self, _mock_genres, mock_random
     ):
-        mock_random.return_value = {
-            "id": 77,
-            "title": "Filme no navegador",
-            "media_type": "movie",
-            "vote_average": 7.7,
-            "reviews": [],
-            "provider_groups": [],
-            "credit_sections": [],
-        }
+        mock_random.return_value = tmdb_title_payload(
+            id=77,
+            title="Filme no navegador",
+            vote_average=7.7,
+        )
 
         response = self.client.post(
             reverse("movies:generate_movie"),
@@ -337,7 +334,7 @@ class MovieViewTests(TestCase):
         session = self.client.session
         session["visitor_id"] = str(visitor_id)
         session.save()
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=78,
             media_type=Title.MOVIE,
             name="Historico antigo",
@@ -447,7 +444,7 @@ class MovieViewTests(TestCase):
         session = self.client.session
         session["visitor_id"] = str(visitor_id)
         session.save()
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=42,
             media_type=Title.MOVIE,
             name="Filme teste",
@@ -472,7 +469,7 @@ class MovieViewTests(TestCase):
         self.assertFalse(Favorite.objects.filter(visitor_id=visitor_id, title=title).exists())
 
     def test_known_title_can_be_added_to_my_list_without_generation(self):
-        title = Title.objects.create(tmdb_id=7, media_type=Title.TV, name="Série conhecida")
+        title = create_title(tmdb_id=7, media_type=Title.TV, name="Série conhecida")
 
         response = self.client.post(
             reverse("movies:toggle_favorite"),
@@ -515,19 +512,34 @@ class MovieViewTests(TestCase):
         mock_details.assert_called_once_with("movie", 88, include_streaming=False)
 
     @patch("movies.views.get_streaming_groups")
-    def test_streaming_links_are_returned_as_json(self, mock_streaming):
-        mock_streaming.return_value = [
-            {
-                "key": "sub",
-                "label": "Incluso na assinatura",
-                "providers": [
-                    {
-                        "provider_name": "Stream Teste",
-                        "web_url": "https://example.com/watch/88",
-                    }
-                ],
-            }
-        ]
+    @patch("movies.views.get_title_details")
+    def test_streaming_links_are_returned_as_json(
+        self,
+        mock_details,
+        mock_streaming,
+    ):
+        call_order = []
+
+        def validate_title(*_args, **_kwargs):
+            call_order.append("tmdb")
+
+        def fetch_streaming(*_args):
+            call_order.append("watchmode")
+            return [
+                {
+                    "key": "sub",
+                    "label": "Incluso na assinatura",
+                    "providers": [
+                        {
+                            "provider_name": "Stream Teste",
+                            "web_url": "https://example.com/watch/88",
+                        }
+                    ],
+                }
+            ]
+
+        mock_details.side_effect = validate_title
+        mock_streaming.side_effect = fetch_streaming
 
         response = self.client.get(
             reverse("movies:streaming_links", args=("movie", 88))
@@ -536,7 +548,27 @@ class MovieViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["groups"][0]["key"], "sub")
         self.assertEqual(response["Cache-Control"], "private, max-age=21600")
+        mock_details.assert_called_once_with("movie", 88, include_streaming=False)
         mock_streaming.assert_called_once_with("movie", 88)
+        self.assertEqual(call_order, ["tmdb", "watchmode"])
+
+    @patch("movies.views.get_streaming_groups")
+    @patch(
+        "movies.views.get_title_details",
+        side_effect=TMDBNotFound("O título não foi encontrado no TMDB."),
+    )
+    def test_streaming_links_do_not_call_watchmode_for_missing_title(
+        self,
+        _mock_details,
+        mock_streaming,
+    ):
+        response = self.client.get(
+            reverse("movies:streaming_links", args=("movie", 999))
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["groups"], [])
+        mock_streaming.assert_not_called()
 
     def test_streaming_links_reject_invalid_media_type(self):
         response = self.client.get(
@@ -574,3 +606,14 @@ class MovieViewTests(TestCase):
         response = self.client.get(reverse("movies:toggle_favorite"))
 
         self.assertEqual(response.status_code, 405)
+
+    def test_invalid_favorite_does_not_create_session_or_business_data(self):
+        response = self.client.post(
+            reverse("movies:toggle_favorite"),
+            {"media_type": "invalid", "tmdb_id": "not-an-id"},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn("sessionid", self.client.cookies)
+        self.assertFalse(Title.objects.exists())
+        self.assertFalse(Favorite.objects.exists())

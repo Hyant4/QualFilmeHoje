@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'movies/css/site.css' %}">
-  <script src="{% static 'movies/js/site.js' %}" defer></script>
+  <script type="module" src="{% static 'movies/js/site.js' %}"></script>
   {% if seo_json_ld %}<script type="application/ld+json">{{ seo_json_ld|safe }}</script>{% endif %}
 </head>
 <body class="{% if error %}has-top-alert {% endif %}{% if is_detail_page %}detail-page{% endif %}{% if is_content_page %}content-page{% endif %}">

@@ -8,6 +8,7 @@ from django.urls import reverse
 
 from movies.models import Title
 from movies.services.tmdb import TMDBError, TMDBNotFound
+from movies.tests.factories import create_title, tmdb_title_payload
 
 CANONICAL_SITE = "https://qualfilmehoje.vercel.app"
 GOOGLE_VERIFICATION_TOKEN = "8J1E6sV8WN1zxIrmvUWlcKWKDZ8lurm1bycxUgO2ssc"
@@ -46,7 +47,7 @@ class SEOEndpointsTests(TestCase):
         )
 
     def test_sitemap_contains_only_canonical_indexable_urls(self):
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=42,
             media_type=Title.MOVIE,
             name="Filme indexável",
@@ -179,15 +180,11 @@ class SEOMetadataTests(TestCase):
 
     @patch("movies.views.get_title_details")
     def test_title_page_has_its_own_canonical_and_description(self, mock_details):
-        mock_details.return_value = {
-            "id": 88,
-            "title": "Um filme com um nome deliberadamente muito longo para SEO",
-            "media_type": "movie",
-            "backdrop_url": "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
-            "reviews": [],
-            "provider_groups": [],
-            "credit_sections": [],
-        }
+        mock_details.return_value = tmdb_title_payload(
+            id=88,
+            title="Um filme com um nome deliberadamente muito longo para SEO",
+            backdrop_url="https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+        )
 
         path = reverse("movies:title_detail", args=("movie", 88))
         response = self.client.get(path)
