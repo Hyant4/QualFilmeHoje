@@ -13,6 +13,7 @@ from django.test import RequestFactory, SimpleTestCase, TestCase, override_setti
 from django.urls import reverse
 from django.utils import timezone
 
+from movies.infrastructure.rate_limits import consume_rate_limit
 from movies.models import RateLimitBucket
 from movies.security import get_client_ip, rate_limit
 from movies.services.tmdb import TMDBNotFound, _fetch_title_extras, get_title_details
@@ -89,6 +90,29 @@ class ApplicationRateLimitTests(TestCase):
 
         self.assertEqual([response.status_code for response in responses], [200, 200, 429])
         self.assertIn("Retry-After", responses[-1])
+
+    @patch("movies.infrastructure.rate_limits.connection")
+    def test_postgresql_upsert_qualifies_target_columns(self, db_connection):
+        db_connection.vendor = "postgresql"
+        db_connection.ops.quote_name.side_effect = lambda value: f'"{value}"'
+        cursor = db_connection.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (1, timezone.now() + timedelta(seconds=60))
+
+        accepted, _retry_after = consume_rate_limit(
+            "test",
+            "ip",
+            "203.0.113.10",
+            2,
+            60,
+        )
+
+        sql, parameters = cursor.execute.call_args.args
+        table = '"qualfilmehoje_rate_limit"'
+        self.assertTrue(accepted)
+        self.assertIn(f'{table}."reset_at"', sql)
+        self.assertIn(f'{table}."request_count"', sql)
+        self.assertEqual(len(parameters), 4)
+        self.assertNotIn("203.0.113.10", sql)
 
     def test_identifier_is_stored_only_as_an_opaque_hmac(self):
         protected = rate_limit("test", ip=(2, 60), methods={"GET"})(

@@ -58,17 +58,19 @@ def consume_rate_limit(scope, dimension, identifier, limit, window_seconds):
     key_column = quote(RateLimitBucket._meta.get_field("bucket_key").column)
     count_column = quote(RateLimitBucket._meta.get_field("request_count").column)
     reset_column = quote(RateLimitBucket._meta.get_field("reset_at").column)
+    target_count = f"{table}.{count_column}"
+    target_reset = f"{table}.{reset_column}"
     sql = f"""
         INSERT INTO {table} ({key_column}, {count_column}, {reset_column})
         VALUES (%s, 1, %s)
         ON CONFLICT ({key_column}) DO UPDATE SET
             {count_column} = CASE
-                WHEN {reset_column} <= %s THEN 1
-                ELSE {count_column} + 1
+                WHEN {target_reset} <= %s THEN 1
+                ELSE {target_count} + 1
             END,
             {reset_column} = CASE
-                WHEN {reset_column} <= %s THEN excluded.{reset_column}
-                ELSE {reset_column}
+                WHEN {target_reset} <= %s THEN excluded.{reset_column}
+                ELSE {target_reset}
             END
         RETURNING {count_column}, {reset_column}
     """
