@@ -113,11 +113,19 @@ SQLite, DEBUG ou e-mail desativado.
 
 ## 3. Abuso de API, cache e rotas somente leitura
 
-O cache de producao agora usa a tabela `qualfilmehoje_cache` no Neon por meio do
+O cache de producao usa a tabela `qualfilmehoje_cache` no Neon por meio do
 `DatabaseCache`. Assim, resultados TMDB/Watchmode, respostas negativas e os
-contadores do allauth nao se perdem entre cold starts da Vercel. Execute a
-migration `0004_sharedcacheentry` com `neondb_owner` antes de trocar a URL do
-runtime:
+contadores do allauth nao se perdem entre cold starts da Vercel.
+
+Os limites das rotas da aplicacao usam a tabela separada
+`qualfilmehoje_rate_limit`. Cada consumo e feito por uma unica instrucao
+`INSERT ... ON CONFLICT ... RETURNING`, de forma atomica no PostgreSQL. IP,
+usuario e escopo sao combinados em um HMAC opaco antes de chegar ao banco. O
+Allauth continua com o limitador proprio da biblioteca e deve permanecer
+protegido tambem por uma camada de borda.
+
+Execute as migrations `0004_sharedcacheentry` e `0006_ratelimitbucket` com
+`neondb_owner` antes de trocar a URL do runtime:
 
 ```powershell
 $env:DATABASE_URL = '<URL-direta-do-neondb_owner>'
@@ -129,32 +137,42 @@ Foram adicionados limites de cinco minutos por IP e, quando autenticado, tambem
 por usuario:
 
 - `POST /gerar/`: 30/IP e 20/usuario;
+- `GET /api/onde-assistir/.../`: 60/IP e 45/usuario;
 - `GET /titulo/.../`: 120/IP e 90/usuario;
-- `POST /favoritos/alternar/`: 60/IP e 40/usuario.
+- `POST /favoritos/alternar/`: 60/IP e 40/usuario;
+- `POST /security/csp-report/`: 60/IP.
 
 IDs aceitam somente digitos ASCII, no maximo 10 caracteres e uma faixa
 positiva limitada. Notas nao aceitam `NaN`/infinito e ficam entre 0 e 10 com
 uma casa decimal. Um ID inexistente do TMDB fica em cache negativo por 30
-minutos. O Watchmode so e consultado depois que o TMDB confirmou o titulo.
+minutos. O Watchmode so e consultado depois que o TMDB confirmou o titulo,
+inclusive quando `/api/onde-assistir/.../` e acessado diretamente. Se o TMDB
+responder que o titulo nao existe, a API retorna 404 sem chamar a Watchmode.
 
 `GET /titulo/.../` nao cria `visitor_id` e nao grava `Title`, `Generation`,
 `Favorite` ou `Session`. Se o visitante favoritar um titulo novo, o snapshot e
-persistido no POST correspondente. O cache operacional compartilhado pode
-gravar apenas sua propria entrada na tabela de cache.
+persistido no POST correspondente. O cache operacional e o limitador
+compartilhado podem gravar apenas suas proprias entradas nas respectivas
+tabelas.
 
 ### Firewall da Vercel
 
-O checkout local nao estava vinculado a Vercel e a CLI nao estava instalada,
-portanto nenhuma regra externa foi criada silenciosamente. Depois de executar
-`vercel link`, rode `ops/vercel-firewall.ps1`. Ele prepara, sem publicar:
+As tres regras `QFH` estao publicadas, ativas e em modo de registro no projeto
+vinculado. O script `ops/vercel-firewall.ps1` reproduz essa configuracao
+inicial como drafts e nunca chama `publish`:
 
-1. um rate limit conjunto para `/gerar/` e `/titulo/`, com excedentes apenas
-   registrados;
+1. um rate limit conjunto para `/gerar/`, `/titulo/` e
+   `/api/onde-assistir/`, com excedentes apenas registrados;
 2. uma regra `log` para probes comuns como `/.env` e `/.git/config`;
 3. uma regra `log` para observar o acesso ao `/admin/`.
 
-Revise `vercel firewall diff` e o painel de trafego por pelo menos 24 horas.
-Somente depois teste bloqueio em Preview. A publicacao final deve ser manual:
+Antes de executar o script em outro checkout, use
+`vercel firewall rules list --json` e `vercel firewall diff --json`. O script
+interrompe se encontrar uma regra `QFH` existente, evitando drafts duplicados.
+
+Monitore o painel de trafego por pelo menos 24 horas antes de transformar
+qualquer acao `log` em bloqueio. Para alteracoes futuras, revise primeiro
+`vercel firewall diff`; a publicacao deve continuar manual:
 
 ```powershell
 vercel firewall publish --yes

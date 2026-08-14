@@ -16,6 +16,12 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from movies.models import Favorite, Generation, Title
+from movies.tests.factories import (
+    DEFAULT_USER_PASSWORD,
+    create_title,
+    create_user,
+    tmdb_title_payload,
+)
 
 GOOGLE_PROVIDER_SETTINGS = {
     "google": {
@@ -33,20 +39,8 @@ GOOGLE_PROVIDER_SETTINGS = {
 
 
 class AuthenticationTests(TestCase):
-    password = "CinemaPortfolio2026!"
-
-    def create_user(self, email="pessoa@example.com", username=None):
-        user = get_user_model().objects.create_user(
-            username=username or email.split("@", maxsplit=1)[0],
-            email=email,
-            password=self.password,
-        )
-        EmailAddress.objects.update_or_create(
-            user=user,
-            email=email,
-            defaults={"verified": True, "primary": True},
-        )
-        return user
+    password = DEFAULT_USER_PASSWORD
+    create_user = staticmethod(create_user)
 
     def test_login_and_signup_pages_offer_both_methods(self):
         with override_settings(
@@ -248,7 +242,7 @@ class AuthenticationTests(TestCase):
         session = self.client.session
         session["visitor_id"] = str(visitor_id)
         session.save()
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=101,
             media_type=Title.MOVIE,
             name="Filme preservado",
@@ -278,7 +272,7 @@ class AuthenticationTests(TestCase):
         session = self.client.session
         session["visitor_id"] = str(visitor_id)
         session.save()
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=202,
             media_type=Title.TV,
             name="Série sem duplicata",
@@ -325,15 +319,10 @@ class AuthenticationTests(TestCase):
         _mock_genres,
         mock_random_title,
     ):
-        mock_random_title.return_value = {
-            "id": 303,
-            "title": "Filme da conta",
-            "media_type": "movie",
-            "vote_average": 8.0,
-            "reviews": [],
-            "provider_groups": [],
-            "credit_sections": [],
-        }
+        mock_random_title.return_value = tmdb_title_payload(
+            id=303,
+            title="Filme da conta",
+        )
         user = self.create_user()
         self.client.force_login(user)
 
@@ -347,7 +336,7 @@ class AuthenticationTests(TestCase):
 
     def test_account_can_favorite_title_generated_in_another_session(self):
         user = self.create_user()
-        title = Title.objects.create(
+        title = create_title(
             tmdb_id=404,
             media_type=Title.MOVIE,
             name="Filme de outro navegador",

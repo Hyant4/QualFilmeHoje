@@ -142,3 +142,19 @@ class SharedCacheEntry(models.Model):
 
     def __str__(self):
         return self.cache_key
+
+
+class RateLimitBucket(models.Model):
+    """Contador compartilhado dos limites de abuso da aplicacao."""
+
+    bucket_key = models.CharField(max_length=80, primary_key=True)
+    request_count = models.PositiveIntegerField(default=0)
+    reset_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "qualfilmehoje_rate_limit"
+        verbose_name = "contador de limite"
+        verbose_name_plural = "contadores de limite"
+
+    def __str__(self):
+        return self.bucket_key

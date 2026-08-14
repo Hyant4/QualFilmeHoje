@@ -1,17 +1,14 @@
 """Controles de abuso que funcionam em varias instancias serverless."""
 
-import hashlib
-import hmac
 import ipaddress
 import logging
-import time
 from functools import wraps
 
 from django.conf import settings
-from django.core.cache import cache
-from django.core.cache.backends.base import InvalidCacheBackendError
 from django.db import DatabaseError
 from django.http import HttpResponse, JsonResponse
+
+from .infrastructure.rate_limits import consume_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -35,32 +32,6 @@ def get_client_ip(request):
     return str(address)
 
 
-def _identifier_digest(dimension, value):
-    payload = f"{dimension}:{value}".encode()
-    return hmac.new(
-        settings.SECRET_KEY.encode("utf-8"), payload, hashlib.sha256
-    ).hexdigest()
-
-
-def _consume(scope, dimension, identifier, limit, window_seconds):
-    now = int(time.time())
-    window = now // window_seconds
-    retry_after = window_seconds - (now % window_seconds)
-    digest = _identifier_digest(dimension, identifier)
-    key = f"ratelimit:{scope}:{dimension}:{digest}:{window}"
-    timeout = retry_after + 5
-
-    if cache.add(key, 1, timeout=timeout):
-        return True, retry_after
-    try:
-        count = cache.incr(key)
-    except ValueError:
-        # A entrada pode expirar entre add() e incr().
-        cache.add(key, 1, timeout=timeout)
-        count = 1
-    return count <= limit, retry_after
-
-
 def rate_limit(scope, *, ip=None, user=None, methods=None):
     """Aplica limites fixos ``(quantidade, segundos)`` por IP e usuario."""
 
@@ -80,7 +51,7 @@ def rate_limit(scope, *, ip=None, user=None, methods=None):
 
             try:
                 for dimension, identifier, limit, window_seconds in checks:
-                    accepted, retry_after = _consume(
+                    accepted, retry_after = consume_rate_limit(
                         scope,
                         dimension,
                         identifier,
@@ -111,7 +82,7 @@ def rate_limit(scope, *, ip=None, user=None, methods=None):
                             )
                         response["Retry-After"] = str(retry_after)
                         return response
-            except (DatabaseError, InvalidCacheBackendError):
+            except DatabaseError:
                 logger.exception("O backend compartilhado de rate limit falhou.")
                 return HttpResponse(
                     "Protecao temporariamente indisponivel. Tente novamente.",

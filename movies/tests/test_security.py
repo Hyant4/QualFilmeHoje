@@ -1,17 +1,23 @@
 import json
+from datetime import timedelta
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
+from django.db import DatabaseError
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
+from movies.infrastructure.rate_limits import consume_rate_limit
+from movies.models import RateLimitBucket
 from movies.security import get_client_ip, rate_limit
 from movies.services.tmdb import TMDBNotFound, _fetch_title_extras, get_title_details
-from movies.views import _parse_filters
+from movies.use_cases.home import parse_filters
 
 
 class DeploymentHeaderTests(SimpleTestCase):
@@ -44,14 +50,28 @@ class InputValidationTests(SimpleTestCase):
         )
 
         self.assertEqual(
-            _parse_filters(request),
+            parse_filters(request),
             ("movie", "", 6.0, 10.0, 1900, "", "", ""),
         )
 
+    def test_filters_reject_oversized_rating_text(self):
+        request = RequestFactory().post(
+            "/gerar/",
+            {
+                "min_rating": "1234567",
+                "max_rating": "1234567",
+            },
+        )
 
-class ApplicationRateLimitTests(SimpleTestCase):
+        parsed = parse_filters(request)
+
+        self.assertEqual(parsed[2], 6.0)
+        self.assertEqual(parsed[3], 10.0)
+
+
+class ApplicationRateLimitTests(TestCase):
     def setUp(self):
-        cache.clear()
+        RateLimitBucket.objects.all().delete()
         self.factory = RequestFactory()
 
     def test_ip_limit_returns_429_and_retry_after(self):
@@ -70,6 +90,139 @@ class ApplicationRateLimitTests(SimpleTestCase):
 
         self.assertEqual([response.status_code for response in responses], [200, 200, 429])
         self.assertIn("Retry-After", responses[-1])
+
+    @patch("movies.infrastructure.rate_limits.connection")
+    def test_postgresql_upsert_qualifies_target_columns(self, db_connection):
+        db_connection.vendor = "postgresql"
+        db_connection.ops.quote_name.side_effect = lambda value: f'"{value}"'
+        cursor = db_connection.cursor.return_value.__enter__.return_value
+        cursor.fetchone.return_value = (1, timezone.now() + timedelta(seconds=60))
+
+        accepted, _retry_after = consume_rate_limit(
+            "test",
+            "ip",
+            "203.0.113.10",
+            2,
+            60,
+        )
+
+        sql, parameters = cursor.execute.call_args.args
+        table = '"qualfilmehoje_rate_limit"'
+        self.assertTrue(accepted)
+        self.assertIn(f'{table}."reset_at"', sql)
+        self.assertIn(f'{table}."request_count"', sql)
+        self.assertEqual(len(parameters), 4)
+        self.assertNotIn("203.0.113.10", sql)
+
+    def test_identifier_is_stored_only_as_an_opaque_hmac(self):
+        protected = rate_limit("test", ip=(2, 60), methods={"GET"})(
+            lambda _request: HttpResponse("ok")
+        )
+        request = self.factory.get("/protegido/")
+        request.user = AnonymousUser()
+        request.META["REMOTE_ADDR"] = "203.0.113.10"
+
+        protected(request)
+
+        bucket = RateLimitBucket.objects.get()
+        self.assertTrue(bucket.bucket_key.startswith("v2:"))
+        self.assertNotIn("203.0.113.10", bucket.bucket_key)
+        self.assertNotIn("test", bucket.bucket_key)
+
+    def test_expired_bucket_starts_a_new_window(self):
+        protected = rate_limit("test", ip=(1, 60), methods={"GET"})(
+            lambda _request: HttpResponse("ok")
+        )
+        request = self.factory.get("/protegido/")
+        request.user = AnonymousUser()
+        request.META["REMOTE_ADDR"] = "203.0.113.10"
+        self.assertEqual(protected(request).status_code, 200)
+        self.assertEqual(protected(request).status_code, 429)
+
+        RateLimitBucket.objects.update(
+            reset_at=timezone.now() - timedelta(seconds=1)
+        )
+
+        self.assertEqual(protected(request).status_code, 200)
+        bucket = RateLimitBucket.objects.get()
+        self.assertEqual(bucket.request_count, 1)
+
+    def test_different_ip_has_an_independent_bucket(self):
+        protected = rate_limit("test", ip=(1, 60), methods={"GET"})(
+            lambda _request: HttpResponse("ok")
+        )
+        statuses = []
+        for address in ("203.0.113.10", "203.0.113.20"):
+            request = self.factory.get("/protegido/")
+            request.user = AnonymousUser()
+            request.META["REMOTE_ADDR"] = address
+            statuses.append(protected(request).status_code)
+
+        self.assertEqual(statuses, [200, 200])
+        self.assertEqual(RateLimitBucket.objects.count(), 2)
+
+    def test_different_scope_has_an_independent_bucket(self):
+        first_scope = rate_limit("first", ip=(1, 60), methods={"GET"})(
+            lambda _request: HttpResponse("ok")
+        )
+        second_scope = rate_limit("second", ip=(1, 60), methods={"GET"})(
+            lambda _request: HttpResponse("ok")
+        )
+        request = self.factory.get("/protegido/")
+        request.user = AnonymousUser()
+        request.META["REMOTE_ADDR"] = "203.0.113.10"
+
+        self.assertEqual(first_scope(request).status_code, 200)
+        self.assertEqual(first_scope(request).status_code, 429)
+        self.assertEqual(second_scope(request).status_code, 200)
+        self.assertEqual(RateLimitBucket.objects.count(), 2)
+
+    def test_different_user_has_an_independent_bucket(self):
+        protected = rate_limit("test", user=(1, 60), methods={"GET"})(
+            lambda _request: HttpResponse("ok")
+        )
+        statuses = []
+        for user_id in (41, 42):
+            request = self.factory.get("/protegido/")
+            request.user = SimpleNamespace(is_authenticated=True, pk=user_id)
+            statuses.append(protected(request).status_code)
+
+        self.assertEqual(statuses, [200, 200])
+        self.assertEqual(RateLimitBucket.objects.count(), 2)
+        for bucket_key in RateLimitBucket.objects.values_list(
+            "bucket_key", flat=True
+        ):
+            self.assertRegex(bucket_key, r"^v2:[0-9a-f]{64}$")
+
+    def test_method_outside_scope_does_not_consume_a_bucket(self):
+        protected = rate_limit("test", ip=(1, 60), methods={"POST"})(
+            lambda _request: HttpResponse("ok")
+        )
+        request = self.factory.get("/protegido/")
+        request.user = AnonymousUser()
+        request.META["REMOTE_ADDR"] = "203.0.113.10"
+
+        response = protected(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RateLimitBucket.objects.exists())
+
+    @patch(
+        "movies.security.consume_rate_limit",
+        side_effect=DatabaseError("offline"),
+    )
+    def test_store_failure_fails_closed(self, _consume):
+        protected = rate_limit("test", ip=(1, 60), methods={"GET"})(
+            lambda _request: HttpResponse("ok")
+        )
+        request = self.factory.get("/protegido/")
+        request.user = AnonymousUser()
+        request.META["REMOTE_ADDR"] = "203.0.113.10"
+
+        with self.assertLogs("movies.security", level="ERROR"):
+            response = protected(request)
+
+        self.assertEqual(response.status_code, 503)
 
     @override_settings(IS_VERCEL=True)
     def test_only_the_trusted_proxy_side_of_xff_is_used(self):
