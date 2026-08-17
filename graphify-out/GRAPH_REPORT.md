@@ -1,261 +1,167 @@
-# Graph Report - QualFilmeHoje  (2026-08-14)
+# Graph Report - .  (2026-08-17)
 
 ## Corpus Check
-- 70 files · ~71,817 words
+- 107 files · ~71,933 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 547 nodes · 1020 edges · 64 communities (39 shown, 25 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 105 edges (avg confidence: 0.64)
+- 516 nodes · 1030 edges · 40 communities (27 shown, 13 thin omitted)
+- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 107 edges (avg confidence: 0.62)
 - Token cost: 0 input · 0 output
 
-## Graph Freshness
-- Built from commit: `f6672473`
-- Run `git rev-parse HEAD` and compare to check if the graph is stale.
-- Run `graphify update .` after code changes (no API cost).
-
 ## Community Hubs (Navigation)
-- SEOMetadataTests
-- Q: $security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify
-- watchmode.py
-- tmdb.py
-- rate_limit
-- site.js
-- MovieViewTests
-- FrontendModuleTests
-- tmdb_catalog.py
-- library.py
-- Email Message Layout
-- Movie and Series Generator
-- Django
-- context_processors.py
-- QualFilmeHojeAccountAdapter
-- QualFilmeHojeMFAAdapter
-- AdminMFAMiddleware
-- Account Entrance Layout
-- Password Reset
-- Google OAuth Login
-- QualFilmeHoje Logo
-- QualFilmeHoje Social Preview
-- Account Registration
-- Saved Favorites
-- vercel.json
-- Security Hardening Plan
-- 0001_initial.py
-- 0002_favorite_user_generation_user_and_more.py
-- 0003_whatsappcontact.py
-- 0004_sharedcacheentry.py
-- 0005_remove_whatsapp_integration.py
-- Signup Email Confirmation Subject
-- Email Confirmation
-- Email Confirmation Flow
-- Graphify Workflow Guidance
-- use_cases/__init__.py
-- Home Movie Viewing Scene
-- Home Cinema Viewing Scene
-- Password Reset Subject
-- python-dotenv
-- infrastructure/__init__.py
-- 0006_ratelimitbucket.py
-- home.py
-- AuthenticationTests
-- Favorite
-- TitleSitemap
-- Title
-- create_title
-- Q: Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?
-- Q: voce lembra a 3 fase que iamos implementar agora?
-- override_settings
-- Q: pode prosseguir com a fase 3
-- Q: oque falta agora?
-- patch
-- SimpleTestCase
-- TestCase
+- Favorites and endpoints
+- HTTP client
+- Application startup
+- Rate limiting
+- TMDB catalog
+- Security hardening
+- Templates and branding
+- Frontend JavaScript
+- View tests
+- Authentication tests
+- Domain models
+- Home page use cases
+- SEO tests
+- Django administration
+- Sitemaps
+- Library and favorites tests
+- SEO metadata
+- Account adapter
+- MFA adapter
+- Admin MFA middleware
+- Frontend tests
+- Password reset templates
+- Vercel configuration
+- Infrastructure package
+- Initial migration
+- Favorites migration
+- WhatsApp migration
+- Shared cache migration
+- WhatsApp removal migration
+- Rate limit migration
+- Use cases package
+- Hero image asset
 
 ## God Nodes (most connected - your core abstractions)
 1. `Title` - 30 edges
 2. `MovieViewTests` - 27 edges
 3. `AuthenticationTests` - 22 edges
 4. `TMDBError` - 20 edges
-5. `TMDBServiceTests` - 17 edges
+5. `rate_limit()` - 18 edges
 6. `get_streaming_groups()` - 17 edges
-7. `rate_limit()` - 17 edges
+7. `TMDBServiceTests` - 17 edges
 8. `ExternalResponseError` - 16 edges
-9. `get_random_title()` - 15 edges
-10. `get_title_details()` - 15 edges
+9. `get_title_details()` - 16 edges
+10. `get_random_title()` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `pip-audit` --conceptually_related_to--> `Django`  [INFERRED]
-  requirements-dev.txt → requirements.txt
-- `Ruff` --conceptually_related_to--> `Django`  [INFERRED]
-  requirements-dev.txt → requirements.txt
-- `SEOEndpointsTests` --uses--> `Title`  [INFERRED]
-  movies/tests/test_seo.py → movies/models.py
-- `SEOMetadataTests` --uses--> `Title`  [INFERRED]
-  movies/tests/test_seo.py → movies/models.py
-- `TMDBError` --uses--> `ExternalResponseError`  [INFERRED]
-  movies/services/tmdb_client.py → movies/services/http_client.py
+- `Remaining hardening work query result` --reports_remaining_work_for--> `Security Hardening Plan`  [EXTRACTED]
+  graphify-out/memory/query_20260814_030655_oque_falta_agora.md → docs/security-hardening.md
+- `Account signup template` --uses_account_registration_flow_from--> `django-allauth authentication`  [INFERRED]
+  movies/templates/account/signup.html → requirements.txt
+- `Home page` --preloads--> `Hero session focus image`  [EXTRACTED]
+  movies/templates/movies/home.html → movies/static/movies/images/hero-session-focus.webp
+- `Home page` --uses_for_social_metadata--> `QualFilmeHoje social sharing image`  [EXTRACTED]
+  movies/templates/movies/home.html → movies/static/movies/images/og-qualfilmehoje.png
+- `Privacy page` --documents_security_and_authentication_behavior_of--> `django-allauth authentication`  [INFERRED]
+  movies/templates/movies/privacy.html → requirements.txt
 
 ## Import Cycles
 - None detected.
 
-## Hyperedges (group relationships)
-- **Account Entrance Templates** — movies_templates_account_base_entrance_account_entrance_layout, movies_templates_account_email_confirm_email_confirmation_page, movies_templates_account_login_login_page, movies_templates_account_logout_logout_page [EXTRACTED 1.00]
-- **Branded Email Message Templates** — movies_templates_account_email_base_message_email_message_layout, movies_templates_account_email_email_confirmation_message_email_confirmation_message, movies_templates_account_email_email_confirmation_signup_message_signup_confirmation_message, movies_templates_account_email_password_reset_key_message_password_reset_message [EXTRACTED 1.00]
-- **Password Recovery Flow** — movies_templates_account_password_reset_done_password_reset_request, movies_templates_account_password_reset_from_key_password_reset, movies_templates_account_password_reset_from_key_done_password_change [EXTRACTED 1.00]
-- **Account Lifecycle** — movies_templates_account_signup_account_registration, movies_templates_account_verification_sent_email_confirmation, movies_templates_account_verified_email_required_verified_email_access [INFERRED 0.85]
-- **Email Confirmation Content Variants** — movies_templates_account_email_email_confirmation_message_email_confirmation_message, movies_templates_account_email_email_confirmation_message_email_confirmation_plaintext, movies_templates_account_email_email_confirmation_signup_message_signup_confirmation_message, movies_templates_account_email_email_confirmation_signup_message_signup_confirmation_plaintext, movies_templates_account_email_email_confirmation_signup_subject_signup_confirmation_subject, movies_templates_account_email_email_confirmation_subject_email_confirmation_subject [INFERRED 0.85]
-- **Google Authentication Flow** — movies_templates_account_signup_google_oauth, movies_templates_socialaccount_login_google_oauth_login, movies_templates_socialaccount_signup_google_oauth_signup [INFERRED 0.85]
+## Communities (40 total, 13 thin omitted)
 
-## Communities (64 total, 25 thin omitted)
-
-### Community 0 - "SEOMetadataTests"
-Cohesion: 0.16
-Nodes (5): override_settings, patch, TestCase, SEOEndpointsTests, SEOMetadataTests
-
-### Community 1 - "Q: $security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
-Cohesion: 0.40
-Nodes (4): Answer, Outcome, Q: $security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify, Source Nodes
-
-### Community 2 - "watchmode.py"
-Cohesion: 0.06
-Nodes (41): dict, HTTPRedirectHandler, ExternalResponseError, NoRedirectHandler, open_json(), Exception, Leitura JSON limitada, sem encaminhar credenciais em redirects., A resposta externa nao e JSON confiavel dentro dos limites locais. (+33 more)
-
-### Community 3 - "tmdb.py"
-Cohesion: 0.09
-Nodes (39): csrf_exempt, get_library(), is_favorite(), _build_title_payload(), _fetch_title_extras(), _get(), get_genres(), _get_movie_release_list() (+31 more)
-
-### Community 4 - "rate_limit"
+### Community 0 - "Favorites and endpoints"
 Cohesion: 0.07
-Nodes (19): consume_rate_limit(), _identifier_key(), _normalise_reset_at(), Persistencia atomica dos contadores de limite de requisicoes., Gera uma chave opaca sem persistir IP, usuario ou escopo em texto aberto., Incrementa um bucket em uma unica instrucao atomica e retorna a decisao., get_client_ip(), rate_limit() (+11 more)
+Nodes (50): csrf_exempt, _account_user(), get_favorites(), is_favorite(), Retorna a coleção da página Minha lista em uma única consulta., toggle_favorite(), _build_title_payload(), _discovery_cache_key() (+42 more)
 
-### Community 5 - "site.js"
+### Community 1 - "HTTP client"
+Cohesion: 0.07
+Nodes (35): dict, HTTPRedirectHandler, ExternalResponseError, NoRedirectHandler, open_json(), Exception, Leitura JSON limitada, sem encaminhar credenciais em redirects., A resposta externa nao e JSON confiavel dentro dos limites locais. (+27 more)
+
+### Community 2 - "Application startup"
+Cohesion: 0.06
+Nodes (33): AppConfig, atomic, MoviesConfig, _canonical_url(), Notifica buscadores participantes quando uma URL publica e criada., Monta e envia a URL publica de um filme ou serie validos., Envia uma URL canonica sem propagar falhas para a requisicao do usuario., submit_title_url() (+25 more)
+
+### Community 3 - "Rate limiting"
+Cohesion: 0.07
+Nodes (22): consume_rate_limit(), _identifier_key(), _normalise_reset_at(), Persistencia atomica dos contadores de limite de requisicoes., Gera uma chave opaca sem persistir IP, usuario ou escopo em texto aberto., Incrementa um bucket em uma unica instrucao atomica e retorna a decisao., RateLimitBucket, Contador compartilhado dos limites de abuso da aplicacao. (+14 more)
+
+### Community 4 - "TMDB catalog"
+Cohesion: 0.17
+Nodes (34): fetch_title_extras(), get_genres(), get_movie_release_list(), get_recent_top_titles(), get_title_details(), normalise_release_list_item(), Consultas de catálogo, detalhes e listas do TMDB., Exception (+26 more)
+
+### Community 5 - "Security hardening"
+Cohesion: 0.08
+Nodes (27): CSP report-only rollout, External API response validation, Fail-closed production configuration, MFA-protected admin access, Neon least-privilege runtime role, Security Hardening Plan, Session and privacy protections, Shared rate limiting and cache (+19 more)
+
+### Community 6 - "Templates and branding"
+Cohesion: 0.09
+Nodes (25): Hero session focus image, QualFilmeHoje logo, QualFilmeHoje social sharing image, Logout template, Email confirmation sent message, Email confirmed message, Account signup template, Verification sent template (+17 more)
+
+### Community 7 - "Frontend JavaScript"
 Cohesion: 0.13
 Nodes (17): initFavorites(), initGenerator(), MEDIA_TYPES, NAVIGATION_KEYS, pulseRangeValue(), updateRangeDisplay(), initBrowserHistory(), normaliseBrowserHistory() (+9 more)
 
-### Community 6 - "MovieViewTests"
+### Community 8 - "View tests"
 Cohesion: 0.17
 Nodes (3): MovieViewTests, patch, TestCase
 
-### Community 8 - "tmdb_catalog.py"
-Cohesion: 0.16
-Nodes (35): fetch_title_extras(), get_genres(), get_movie_release_list(), get_recent_top_titles(), get_title_details(), normalise_release_list_item(), Consultas de catálogo, detalhes e listas do TMDB., Exception (+27 more)
-
-### Community 9 - "library.py"
-Cohesion: 0.06
-Nodes (38): AppConfig, atomic, MoviesConfig, _canonical_url(), Notifica buscadores participantes quando uma URL publica e criada., Monta e envia a URL publica de um filme ou serie validos., Envia uma URL canonica sem propagar falhas para a requisicao do usuario., submit_title_url() (+30 more)
-
-### Community 10 - "Email Message Layout"
-Cohesion: 0.33
-Nodes (7): Email Message Layout, Email Confirmation Message, Email Confirmation Plaintext Message, Signup Email Confirmation Message, Signup Email Confirmation Plaintext Message, Password Reset Message, Password Reset Plaintext Message
-
-### Community 11 - "Movie and Series Generator"
-Cohesion: 0.33
-Nodes (7): Movie and Series Generator, Recent Generations, Streaming Availability, TMDB Movie Data, External Services, Privacy Policy, Session and CSRF Security
-
-### Community 12 - "Django"
-Cohesion: 0.29
-Nodes (7): pip-audit, Ruff, dj-database-url, Django, django-allauth, django-anymail, psycopg
-
-### Community 13 - "context_processors.py"
-Cohesion: 0.47
-Nodes (5): authentication(), _homepage_json_ld(), _random_movies_json_ld(), Disponibiliza apenas o estado público da integração nos templates., seo_metadata()
-
-### Community 14 - "QualFilmeHojeAccountAdapter"
-Cohesion: 0.40
-Nodes (3): DefaultAccountAdapter, QualFilmeHojeAccountAdapter, Gera um username legível para cadastros sociais sem sobrescrever escolhas.
-
-### Community 15 - "QualFilmeHojeMFAAdapter"
-Cohesion: 0.40
-Nodes (3): DefaultMFAAdapter, QualFilmeHojeMFAAdapter, Mantem TOTP obrigatorio enquanto a conta possuir acesso ao admin.
-
-### Community 17 - "Account Entrance Layout"
-Cohesion: 0.50
-Nodes (4): Account Entrance Layout, Email Confirmation Page, Login Page, Logout Page
-
-### Community 18 - "Password Reset"
-Cohesion: 0.50
-Nodes (4): Password Reset Request, Password Change, Password Reset, Password Reset Token
-
-### Community 19 - "Google OAuth Login"
-Cohesion: 0.50
-Nodes (4): Google Authentication Failure, Google OAuth Cancellation, Google OAuth Login, Google OAuth Signup Completion
-
-### Community 20 - "QualFilmeHoje Logo"
-Cohesion: 0.67
-Nodes (3): Gold Square Frame, Stylized Letter Q, QualFilmeHoje Logo
-
-### Community 21 - "QualFilmeHoje Social Preview"
-Cohesion: 0.67
-Nodes (3): Cinema Session Discovery, QualFilmeHoje, QualFilmeHoje Social Preview
-
-### Community 22 - "Account Registration"
-Cohesion: 0.67
-Nodes (3): Account Registration, Google OAuth Registration, Password Strength Guidance
-
-### Community 23 - "Saved Favorites"
-Cohesion: 0.67
-Nodes (3): Account-Backed Favorites, Saved Favorites, Title Favorites Control
-
-### Community 50 - "home.py"
-Cohesion: 0.22
-Nodes (15): InputValidationTests, build_generation_context(), build_home_context(), filter_options_context(), _genre_name(), _landing_context(), parse_ascii_int(), parse_filters() (+7 more)
-
-### Community 51 - "AuthenticationTests"
+### Community 9 - "Authentication tests"
 Cohesion: 0.12
 Nodes (3): AuthenticationTests, patch, TestCase
 
-### Community 52 - "Favorite"
-Cohesion: 0.20
-Nodes (11): FavoriteAdmin, GenerationAdmin, TitleAdmin, Favorite, Generation, Meta, RateLimitBucket, Tabela gerenciada usada pelo DatabaseCache nas funcoes da Vercel. (+3 more)
-
-### Community 53 - "TitleSitemap"
-Cohesion: 0.21
-Nodes (4): CanonicalSitemap, StaticSitemap, TitleSitemap, Sitemap
-
-### Community 54 - "Title"
+### Community 10 - "Domain models"
 Cohesion: 0.28
 Nodes (6): Title, create_user(), Factories pequenas para manter os testes focados no comportamento relevante., tmdb_title_payload(), TestCase, TestFactoriesTests
 
-### Community 56 - "Q: Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
-Cohesion: 0.40
-Nodes (4): Answer, Outcome, Q: Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?, Source Nodes
+### Community 11 - "Home page use cases"
+Cohesion: 0.26
+Nodes (15): get_library(), build_generation_context(), build_home_context(), filter_options_context(), _genre_name(), _landing_context(), parse_ascii_int(), parse_filters() (+7 more)
 
-### Community 57 - "Q: voce lembra a 3 fase que iamos implementar agora?"
-Cohesion: 0.40
-Nodes (4): Answer, Outcome, Q: voce lembra a 3 fase que iamos implementar agora?, Source Nodes
+### Community 12 - "SEO tests"
+Cohesion: 0.16
+Nodes (5): override_settings, patch, TestCase, SEOEndpointsTests, SEOMetadataTests
 
-### Community 59 - "Q: pode prosseguir com a fase 3"
-Cohesion: 0.40
-Nodes (4): Answer, Outcome, Q: pode prosseguir com a fase 3, Source Nodes
+### Community 13 - "Django administration"
+Cohesion: 0.27
+Nodes (9): FavoriteAdmin, GenerationAdmin, TitleAdmin, Favorite, Generation, Meta, Tabela gerenciada usada pelo DatabaseCache nas funcoes da Vercel., SharedCacheEntry (+1 more)
 
-### Community 60 - "Q: oque falta agora?"
+### Community 14 - "Sitemaps"
+Cohesion: 0.21
+Nodes (4): CanonicalSitemap, StaticSitemap, TitleSitemap, Sitemap
+
+### Community 16 - "SEO metadata"
+Cohesion: 0.47
+Nodes (5): authentication(), _homepage_json_ld(), _random_movies_json_ld(), Disponibiliza apenas o estado público da integração nos templates., seo_metadata()
+
+### Community 17 - "Account adapter"
 Cohesion: 0.40
-Nodes (4): Answer, Outcome, Q: oque falta agora?, Source Nodes
+Nodes (3): DefaultAccountAdapter, QualFilmeHojeAccountAdapter, Gera um username legível para cadastros sociais sem sobrescrever escolhas.
+
+### Community 18 - "MFA adapter"
+Cohesion: 0.40
+Nodes (3): DefaultMFAAdapter, QualFilmeHojeMFAAdapter, Mantem TOTP obrigatorio enquanto a conta possuir acesso ao admin.
+
+### Community 21 - "Password reset templates"
+Cohesion: 0.67
+Nodes (3): Password reset sent template, Password changed template, Password reset template
 
 ## Knowledge Gaps
-- **64 isolated node(s):** `Migration`, `Migration`, `Migration`, `Migration`, `Migration` (+59 more)
+- **39 isolated node(s):** `Migration`, `Migration`, `Migration`, `Migration`, `Migration` (+34 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **25 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
-
-## Work-memory lessons
-
-**Preferred sources** — corroborated by past sessions; start here.
-- `rate_limits.py` (2× useful, score=1.997394493) _(code changed — re-verify)_
-- `RateLimitBucket` (2× useful, score=1.997394493)
-- `tmdb_catalog.py` (2× useful, score=1.996718492)
-- `tmdb.py` (2× useful, score=1.996515669)
-- `generate_movie()` (2× useful, score=1.996515669)
+- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Title` connect `Title` to `SEOMetadataTests`, `watchmode.py`, `MovieViewTests`, `library.py`, `home.py`, `AuthenticationTests`, `Favorite`, `TitleSitemap`?**
-  _High betweenness centrality (0.118) - this node is a cross-community bridge._
-- **Why does `MovieViewTests` connect `MovieViewTests` to `Favorite`, `Title`, `create_title`?**
-  _High betweenness centrality (0.053) - this node is a cross-community bridge._
-- **Why does `AuthenticationTests` connect `AuthenticationTests` to `Favorite`, `Title`, `create_title`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `Title` connect `Domain models` to `Favorites and endpoints`, `Application startup`, `View tests`, `Authentication tests`, `Home page use cases`, `SEO tests`, `Django administration`, `Sitemaps`?**
+  _High betweenness centrality (0.131) - this node is a cross-community bridge._
+- **Why does `MovieViewTests` connect `View tests` to `Domain models`, `Django administration`, `Library and favorites tests`?**
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+- **Why does `AuthenticationTests` connect `Authentication tests` to `Domain models`, `Django administration`, `Library and favorites tests`?**
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **Are the 15 inferred relationships involving `Title` (e.g. with `FavoriteAdmin` and `GenerationAdmin`) actually correct?**
   _`Title` has 15 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 3 inferred relationships involving `MovieViewTests` (e.g. with `Favorite` and `Generation`) actually correct?**

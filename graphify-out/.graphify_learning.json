@@ -1,0 +1,495 @@
+{
+  "generated_at": "2026-08-14T03:27:42.097852+00:00",
+  "nodes": {
+    "docs_security_hardening_security_hardening": {
+      "code_fingerprint": "ab9d007e4511e7a9491c0be8938f0978d7d7a027e0c0f34e87b3bdd8d694d462",
+      "label": "Security Hardening Plan",
+      "last": "2026-08-14T03:06:55.763685+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T03:06:55.763685+00:00",
+          "outcome": "useful",
+          "q": "oque falta agora?"
+        }
+      ],
+      "score": 0.999666763,
+      "source_file": "docs/security-hardening.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "github_workflows_security_security_checks": {
+      "code_fingerprint": "5cdc24cec08241014d452d4ec19513940f82ced9a9b3ec1f86baa2e39b6a8eb8",
+      "label": "Security Checks Workflow",
+      "last": "2026-08-14T03:06:55.763685+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T03:06:55.763685+00:00",
+          "outcome": "useful",
+          "q": "oque falta agora?"
+        }
+      ],
+      "score": 0.999666763,
+      "source_file": ".github/workflows/security.yml",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_infrastructure_rate_limits": {
+      "code_fingerprint": "952a91431244b421ba7f149a681024fe020c2349a1d6432bc39f7e21a6dd7685",
+      "label": "rate_limits.py",
+      "last": "2026-08-14T02:02:24.834112+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T02:02:24.834112+00:00",
+          "outcome": "useful",
+          "q": "pode prosseguir com a fase 3"
+        },
+        {
+          "date": "2026-08-14T01:49:45.395719+00:00",
+          "outcome": "useful",
+          "q": "voce lembra a 3 fase que iamos implementar agora?"
+        }
+      ],
+      "score": 1.997062187,
+      "source_file": "movies/infrastructure/rate_limits.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "movies_mfa_adapter": {
+      "code_fingerprint": "6dd8e1a4d5627ec78f5073d50ca8a94817388fd8256f2c60ca74d62a4fa2e7a1",
+      "label": "mfa_adapter.py",
+      "last": "2026-08-14T03:06:55.763685+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T03:06:55.763685+00:00",
+          "outcome": "useful",
+          "q": "oque falta agora?"
+        }
+      ],
+      "score": 0.999666763,
+      "source_file": "movies/mfa_adapter.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_models_ratelimitbucket": {
+      "code_fingerprint": "2b25405a43c7e1798acc2b334c09c6912ceece051b188b900ef539ea2c8e39a2",
+      "label": "RateLimitBucket",
+      "last": "2026-08-14T02:02:24.834112+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T02:02:24.834112+00:00",
+          "outcome": "useful",
+          "q": "pode prosseguir com a fase 3"
+        },
+        {
+          "date": "2026-08-14T01:49:45.395719+00:00",
+          "outcome": "useful",
+          "q": "voce lembra a 3 fase que iamos implementar agora?"
+        }
+      ],
+      "score": 1.997062187,
+      "source_file": "movies/models.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "movies_services_http_client_open_json": {
+      "code_fingerprint": "32fb410d9928c7177578f2f08ee2c79e827645eb30d599d52198ab8a3dffaf6c",
+      "label": "open_json()",
+      "last": "2026-08-14T01:07:33.101132+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 0.99775381,
+      "source_file": "movies/services/http_client.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_services_tmdb": {
+      "code_fingerprint": "b49d7109f85bf6bb66cd9fe6c910441d583d45a643ae12da18da72657a2e79b2",
+      "label": "tmdb.py",
+      "last": "2026-08-14T01:49:45.395719+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:49:45.395719+00:00",
+          "outcome": "useful",
+          "q": "voce lembra a 3 fase que iamos implementar agora?"
+        },
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 1.996183509,
+      "source_file": "movies/services/tmdb.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "movies_services_tmdb_catalog": {
+      "code_fingerprint": "4714e5d653d0d0c6e12ee9b7f7d4ef4c0a21468799c3aaccb2a03da343585cab",
+      "label": "tmdb_catalog.py",
+      "last": "2026-08-14T02:02:24.834112+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T02:02:24.834112+00:00",
+          "outcome": "useful",
+          "q": "pode prosseguir com a fase 3"
+        },
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 1.996386298,
+      "source_file": "movies/services/tmdb_catalog.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "movies_services_tmdb_client": {
+      "code_fingerprint": "e11fe693a3b9a3da7885dbfdcbed4dc8321f870958ef32c587f0a598b2ddc7bf",
+      "label": "tmdb_client.py",
+      "last": "2026-08-14T01:07:33.101132+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 0.99775381,
+      "source_file": "movies/services/tmdb_client.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_services_tmdb_payloads_validate_title_id": {
+      "code_fingerprint": "b6d32229e6bf4efbf16cf8b2e95b596eeff6d28ab98ec4eaef5a5da29e8326e2",
+      "label": "validate_title_id()",
+      "last": "2026-08-14T02:02:24.834112+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T02:02:24.834112+00:00",
+          "outcome": "useful",
+          "q": "pode prosseguir com a fase 3"
+        }
+      ],
+      "score": 0.998632488,
+      "source_file": "movies/services/tmdb_payloads.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_services_watchmode": {
+      "code_fingerprint": "ad968a46014e00e5263007a55258c05674d2bb1b1e53ca086531a3b32ba2f1c2",
+      "label": "watchmode.py",
+      "last": "2026-08-14T01:49:45.395719+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:49:45.395719+00:00",
+          "outcome": "useful",
+          "q": "voce lembra a 3 fase que iamos implementar agora?"
+        }
+      ],
+      "score": 0.998429699,
+      "source_file": "movies/services/watchmode.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_services_watchmode_get_streaming_groups": {
+      "code_fingerprint": "ad968a46014e00e5263007a55258c05674d2bb1b1e53ca086531a3b32ba2f1c2",
+      "label": "get_streaming_groups()",
+      "last": "2026-08-14T02:02:24.834112+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T02:02:24.834112+00:00",
+          "outcome": "useful",
+          "q": "pode prosseguir com a fase 3"
+        }
+      ],
+      "score": 0.998632488,
+      "source_file": "movies/services/watchmode.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_static_movies_js_favorites": {
+      "code_fingerprint": "12e60f5744c1dc7a3edb8b63279294b23f6f6689042f44342d3d723f93d992bd",
+      "label": "favorites.js",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/static/movies/js/favorites.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_static_movies_js_generator": {
+      "code_fingerprint": "9d0e0d9bf78b285d2106743ce4a40ca197e3a5ca103401e4aa7811f00d8fb498",
+      "label": "generator.js",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/static/movies/js/generator.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_static_movies_js_history": {
+      "code_fingerprint": "8f3044e40fe1be937e69fd7fafb13b72ca7e062bc17490e8757baa7bb73d9ed9",
+      "label": "history.js",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/static/movies/js/history.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_static_movies_js_motion": {
+      "code_fingerprint": "cfb30f79dab3608269d67aee21119963a818ae70b408ae0003a22944c61f4815",
+      "label": "motion.js",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/static/movies/js/motion.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_static_movies_js_navigation": {
+      "code_fingerprint": "39059d4327c5fb5f9697e728a4514acc3a537c7004b3e4d4740cbd760a3d865b",
+      "label": "navigation.js",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/static/movies/js/navigation.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_static_movies_js_site": {
+      "code_fingerprint": "b4b367d6ca25f7a06ddfe9c653c41ecfba2e6b46d09fc407e061089ea95f4621",
+      "label": "site.js",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/static/movies/js/site.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_static_movies_js_streaming": {
+      "code_fingerprint": "2a317ad5a118051644ec6c1c5ceca2c169a362c03c9727654e2376e27a3ae724",
+      "label": "streaming.js",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/static/movies/js/streaming.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_tests_factories": {
+      "code_fingerprint": "217ec4ae4aa6ebde12bae61eb6b17d4dd5269cd73ab508c2e4499409bb3805c5",
+      "label": "factories.py",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/tests/factories.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_tests_factories_create_title": {
+      "code_fingerprint": "217ec4ae4aa6ebde12bae61eb6b17d4dd5269cd73ab508c2e4499409bb3805c5",
+      "label": "create_title()",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/tests/factories.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_tests_factories_create_user": {
+      "code_fingerprint": "217ec4ae4aa6ebde12bae61eb6b17d4dd5269cd73ab508c2e4499409bb3805c5",
+      "label": "create_user()",
+      "last": "2026-08-14T01:25:19.503278+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:25:19.503278+00:00",
+          "outcome": "useful",
+          "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
+        }
+      ],
+      "score": 0.998038385,
+      "source_file": "movies/tests/factories.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_tests_test_security_csptests": {
+      "code_fingerprint": "4e42e52f5411846e0b4bfbacdf79b85e1adb925a193807a242336501564f7fdb",
+      "label": "CSPTests",
+      "last": "2026-08-14T03:06:55.763685+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T03:06:55.763685+00:00",
+          "outcome": "useful",
+          "q": "oque falta agora?"
+        }
+      ],
+      "score": 0.999666763,
+      "source_file": "movies/tests/test_security.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_use_cases_home_build_generation_context": {
+      "code_fingerprint": "c53cdaa841f0091b9930caa5f7ac5818bcd8fa3266d521c50d3481ed66e1b636",
+      "label": "build_generation_context()",
+      "last": "2026-08-14T01:07:33.101132+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 0.99775381,
+      "source_file": "movies/use_cases/home.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_use_cases_titles_build_title_detail_context": {
+      "code_fingerprint": "03e511c3b050eec945fc96f6fd97b44834a7d1874da79c945672eb2dcf84f648",
+      "label": "build_title_detail_context()",
+      "last": "2026-08-14T01:07:33.101132+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 0.99775381,
+      "source_file": "movies/use_cases/titles.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_views_generate_movie": {
+      "code_fingerprint": "6c2e00ae43dcc6193fbbd7ab937bce5aa783e315642eb09bc875c0a48aa63fce",
+      "label": "generate_movie()",
+      "last": "2026-08-14T01:49:45.395719+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:49:45.395719+00:00",
+          "outcome": "useful",
+          "q": "voce lembra a 3 fase que iamos implementar agora?"
+        },
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 1.996183509,
+      "source_file": "movies/views.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "movies_views_privacy": {
+      "code_fingerprint": "6c2e00ae43dcc6193fbbd7ab937bce5aa783e315642eb09bc875c0a48aa63fce",
+      "label": "privacy()",
+      "last": "2026-08-14T03:06:55.763685+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T03:06:55.763685+00:00",
+          "outcome": "useful",
+          "q": "oque falta agora?"
+        }
+      ],
+      "score": 0.999666763,
+      "source_file": "movies/views.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "movies_views_title_detail": {
+      "code_fingerprint": "6c2e00ae43dcc6193fbbd7ab937bce5aa783e315642eb09bc875c0a48aa63fce",
+      "label": "title_detail()",
+      "last": "2026-08-14T01:07:33.101132+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T01:07:33.101132+00:00",
+          "outcome": "useful",
+          "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
+        }
+      ],
+      "score": 0.99775381,
+      "source_file": "movies/views.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "ops_vercel_firewall": {
+      "code_fingerprint": "62f951b9c1d0cbdfb13715ddc87c394055d379704fb49dd2882d02d6c4a1f591",
+      "label": "vercel-firewall.ps1",
+      "last": "2026-08-14T03:06:55.763685+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-14T03:06:55.763685+00:00",
+          "outcome": "useful",
+          "q": "oque falta agora?"
+        }
+      ],
+      "score": 0.999666763,
+      "source_file": "ops/vercel-firewall.ps1",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
+  "version": 1
+}
