@@ -51,7 +51,17 @@ class InputValidationTests(SimpleTestCase):
 
         self.assertEqual(
             parse_filters(request),
-            ("movie", "", 6.0, 10.0, 1900, "", "", ""),
+            (
+                "movie",
+                "",
+                6.0,
+                10.0,
+                1900,
+                timezone.localdate().year,
+                "",
+                "",
+                "",
+            ),
         )
 
     def test_filters_reject_oversized_rating_text(self):

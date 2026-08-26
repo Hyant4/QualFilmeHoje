@@ -1,5 +1,7 @@
 """Descoberta e seleção aleatória de títulos do TMDB."""
 
+import hashlib
+import json
 from concurrent.futures import ThreadPoolExecutor
 
 from django.core.cache import cache
@@ -25,6 +27,29 @@ RUNTIME_FILTERS = {
     "over_120": (120, None),
 }
 
+# Temas prometem um assunto específico, portanto não podem depender somente de
+# gêneros amplos. Os filtros regionais e os gêneros do TMDB continuam podendo
+# ser representados sem uma keyword fixa.
+THEME_CATEGORY_KEYS = frozenset(
+    {
+        "korean_romance",
+        "anime",
+        "space_exploration",
+        "time_travel",
+        "superhero",
+        "survival",
+        "heist",
+        "true_story",
+        "road_trip",
+        "coming_of_age",
+        "psychological_horror",
+        "post_apocalyptic",
+        "zombie",
+        "found_footage",
+        "courtroom_drama",
+    }
+)
+
 SPECIAL_CATEGORIES = {
     "movie": {
         "korean_thriller": {
@@ -38,12 +63,14 @@ SPECIAL_CATEGORIES = {
             "with_origin_country": "KR",
             "with_original_language": "ko",
             "with_genres": "10749",
+            "with_keywords": "9840",
         },
         "anime": {
             "label": "Anime",
             "with_origin_country": "JP",
             "with_original_language": "ja",
             "with_genres": "16",
+            "with_keywords": "210024",
         },
         "japanese_horror": {
             "label": "Terror japonês",
@@ -56,6 +83,63 @@ SPECIAL_CATEGORIES = {
             "with_origin_country": "BR",
             "with_original_language": "pt",
         },
+        "space_exploration": {
+            "label": "Espaço e exploração espacial",
+            "with_genres": "878",
+            "with_keywords": "3801",
+        },
+        "time_travel": {
+            "label": "Viagem no tempo",
+            "with_keywords": "4379",
+        },
+        "superhero": {
+            "label": "Super-heróis",
+            "with_keywords": "9715",
+        },
+        "survival": {
+            "label": "Sobrevivência",
+            "with_keywords": "10349",
+        },
+        "heist": {
+            "label": "Assaltos e golpes",
+            "with_keywords": "10051",
+        },
+        "true_story": {
+            "label": "Baseado em fatos reais",
+            "with_keywords": "9672",
+        },
+        "road_trip": {
+            "label": "Viagem de estrada",
+            "with_keywords": "7312",
+        },
+        "coming_of_age": {
+            "label": "Amadurecimento",
+            "with_keywords": "10683",
+        },
+        "psychological_horror": {
+            "label": "Terror psicológico",
+            "with_genres": "27",
+            "with_keywords": "295907",
+        },
+        "post_apocalyptic": {
+            "label": "Pós-apocalipse",
+            "with_keywords": "4458",
+        },
+        "zombie": {
+            "label": "Zumbis",
+            "with_genres": "27",
+            "with_keywords": "12377",
+        },
+        "found_footage": {
+            "label": "Found footage",
+            "with_genres": "27",
+            "with_keywords": "163053",
+        },
+        "courtroom_drama": {
+            "label": "Drama de tribunal",
+            "with_genres": "18",
+            "with_keywords": "214780",
+        },
     },
     "tv": {
         "korean_drama": {
@@ -64,11 +148,27 @@ SPECIAL_CATEGORIES = {
             "with_original_language": "ko",
             "with_genres": "18",
         },
+        "korean_thriller": {
+            "label": "Suspense coreano",
+            "with_origin_country": "KR",
+            "with_original_language": "ko",
+            "with_genres": "9648",
+            "with_keywords": "288394",
+        },
+        "korean_romance": {
+            "label": "Dorama romântico",
+            "with_origin_country": "KR",
+            "with_original_language": "ko",
+            "with_genres": "18",
+            "with_keywords": "9840",
+            "without_genres": "10759",
+        },
         "anime": {
             "label": "Anime",
             "with_origin_country": "JP",
             "with_original_language": "ja",
             "with_genres": "16",
+            "with_keywords": "210024",
         },
         "brazilian_drama": {
             "label": "Drama brasileiro",
@@ -76,10 +176,64 @@ SPECIAL_CATEGORIES = {
             "with_original_language": "pt",
             "with_genres": "18",
         },
+        "space_exploration": {
+            "label": "Espaço e exploração espacial",
+            "with_genres": "10765",
+            "with_keywords": "3801",
+        },
+        "time_travel": {
+            "label": "Viagem no tempo",
+            "with_keywords": "4379",
+        },
+        "superhero": {
+            "label": "Super-heróis",
+            "with_keywords": "9715",
+        },
+        "survival": {
+            "label": "Sobrevivência",
+            "with_keywords": "10349",
+        },
+        "true_story": {
+            "label": "Baseado em fatos reais",
+            "with_keywords": "9672",
+        },
+        "coming_of_age": {
+            "label": "Amadurecimento",
+            "with_keywords": "10683",
+        },
+        "post_apocalyptic": {
+            "label": "Pós-apocalipse",
+            "with_keywords": "4458",
+        },
+        "zombie": {
+            "label": "Zumbis",
+            "with_genres": "10765",
+            "with_keywords": "12377",
+        },
+        "courtroom_drama": {
+            "label": "Drama de tribunal",
+            "with_genres": "18",
+            "with_keywords": "214780",
+        },
     },
 }
 
 BRAZIL_CERTIFICATIONS = {"L", "10", "12", "14", "16", "18"}
+
+
+def _category_cache_signature(media_type, special_category):
+    """Muda a chave de cache quando os filtros de uma categoria mudam."""
+
+    category = SPECIAL_CATEGORIES.get(media_type, {}).get(special_category)
+    if category is None:
+        return "none"
+    encoded = json.dumps(
+        category,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("ascii")
+    return hashlib.sha256(encoded).hexdigest()[:12]
 
 
 def discovery_cache_key(
@@ -88,6 +242,7 @@ def discovery_cache_key(
     min_rating,
     max_rating,
     min_release_year=None,
+    max_release_year=None,
     runtime_filter=None,
     certification=None,
     special_category=None,
@@ -95,13 +250,16 @@ def discovery_cache_key(
     genre_key = genre_id or "all"
     min_key = f"{min_rating:.1f}".replace(".", "-")
     max_key = f"{max_rating:.1f}".replace(".", "-")
-    year_key = min_release_year or "all"
+    min_year_key = min_release_year or "all"
+    max_year_key = max_release_year or "all"
     runtime_key = runtime_filter or "any"
     certification_key = certification or "any"
     category_key = special_category or "any"
+    category_signature = _category_cache_signature(media_type, special_category)
     return (
-        f"tmdb:discover:v4:{media_type}:{genre_key}:{min_key}:{max_key}:"
-        f"{year_key}:{runtime_key}:{certification_key}:{category_key}"
+        f"tmdb:discover:v6:{media_type}:{genre_key}:{min_key}:{max_key}:"
+        f"{min_year_key}:{max_year_key}:{runtime_key}:{certification_key}:"
+        f"{category_key}:{category_signature}"
     )
 
 
@@ -143,6 +301,7 @@ def load_discovery_page(
     max_rating,
     filters,
     min_release_year=None,
+    max_release_year=None,
     runtime_filter=None,
     certification=None,
     special_category=None,
@@ -156,6 +315,7 @@ def load_discovery_page(
         min_rating,
         max_rating,
         min_release_year,
+        max_release_year,
         runtime_filter,
         certification,
         special_category,
@@ -215,6 +375,7 @@ def get_random_title(
     min_rating=0,
     max_rating=10,
     min_release_year=None,
+    max_release_year=None,
     *,
     include_streaming=True,
     runtime_filter=None,
@@ -231,14 +392,21 @@ def get_random_title(
 
     min_rating = normalise_rating(min_rating)
     max_rating = max(normalise_rating(max_rating), min_rating)
+    current_year = timezone.localdate().year
     if min_release_year is not None:
         try:
             min_release_year = int(min_release_year)
         except (TypeError, ValueError, OverflowError):
             min_release_year = MIN_RELEASE_YEAR
-        min_release_year = min(
-            max(min_release_year, MIN_RELEASE_YEAR), timezone.localdate().year
-        )
+        min_release_year = min(max(min_release_year, MIN_RELEASE_YEAR), current_year)
+    if max_release_year is not None:
+        try:
+            max_release_year = int(max_release_year)
+        except (TypeError, ValueError, OverflowError):
+            max_release_year = current_year
+        max_release_year = min(max(max_release_year, MIN_RELEASE_YEAR), current_year)
+    if min_release_year is not None and max_release_year is not None:
+        max_release_year = max(max_release_year, min_release_year)
     if genre_id is not None:
         genre_value = str(genre_id).strip()
         if (
@@ -251,9 +419,7 @@ def get_random_title(
         else:
             parsed_genre_id = int(genre_value)
             genre_id = (
-                str(parsed_genre_id)
-                if 1 <= parsed_genre_id <= MAX_TMDB_ID
-                else None
+                str(parsed_genre_id) if 1 <= parsed_genre_id <= MAX_TMDB_ID else None
             )
     runtime_filter = runtime_filter if runtime_filter in RUNTIME_FILTERS else None
     certification = str(certification or "").strip().upper()
@@ -276,8 +442,13 @@ def get_random_title(
         filters["include_video"] = "false"
         if min_release_year is not None:
             filters["primary_release_date.gte"] = f"{min_release_year}-01-01"
-    elif min_release_year is not None:
-        filters["first_air_date.gte"] = f"{min_release_year}-01-01"
+        if max_release_year is not None:
+            filters["primary_release_date.lte"] = f"{max_release_year}-12-31"
+    else:
+        if min_release_year is not None:
+            filters["first_air_date.gte"] = f"{min_release_year}-01-01"
+        if max_release_year is not None:
+            filters["first_air_date.lte"] = f"{max_release_year}-12-31"
     if category_filters:
         filters.update(
             {key: value for key, value in category_filters.items() if key != "label"}
@@ -311,6 +482,7 @@ def get_random_title(
         max_rating,
         filters,
         min_release_year,
+        max_release_year,
         runtime_filter,
         certification,
         special_category,
@@ -323,9 +495,7 @@ def get_random_title(
         return payload_builder(data, media_type)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
-        first_details_future = executor.submit(
-            fetch_title, first_title_id, media_type
-        )
+        first_details_future = executor.submit(fetch_title, first_title_id, media_type)
         streaming_future = executor.submit(
             find_streaming_candidate,
             media_type,

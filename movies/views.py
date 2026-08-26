@@ -30,9 +30,17 @@ from .services.tmdb import (
 from .services.watchmode import get_streaming_groups
 from .use_cases import home as home_use_cases
 from .use_cases import titles as title_use_cases
+from .use_cases.filter_interpretation import (
+    FilterInterpretationUnavailable,
+    FilterInterpretationUnsupported,
+    InvalidFilterInput,
+    interpret_text_filter,
+)
 
 CSP_REPORT_MAX_BYTES = 16 * 1024
+AI_FILTER_REQUEST_MAX_BYTES = 4 * 1024
 logger = logging.getLogger(__name__)
+
 
 @require_GET
 def robots_txt(_request):
@@ -41,6 +49,7 @@ def robots_txt(_request):
         "Allow: /",
         "Disallow: /admin/",
         "Disallow: /security/",
+        "Disallow: /api/",
         "Disallow: /gerar/",
         "Disallow: /favoritos/",
         f"Sitemap: {settings.SITE_URL}/sitemap.xml",
@@ -190,6 +199,76 @@ def generate_movie(request):
         is_favorite=is_favorite,
     )
     return render(request, "movies/home.html", context)
+
+
+def _ai_filter_response(payload, *, status=200):
+    response = JsonResponse(payload, status=status)
+    response["Cache-Control"] = "no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+@require_POST
+def interpret_filter(request):
+    """Traduz texto curto em valores que ja existem no formulario."""
+
+    if not settings.AI_FILTER_ENABLED:
+        return _ai_filter_response({"error": "Recurso indisponível."}, status=404)
+    return _interpret_filter_limited(request)
+
+
+@rate_limit("ai-filter", ip=(6, 300), user=(10, 300), methods={"POST"})
+def _interpret_filter_limited(request):
+    if request.content_type != "application/json":
+        return _ai_filter_response(
+            {"error": "Envie apenas um texto curto em JSON."}, status=400
+        )
+
+    body = request.body
+    if len(body) > AI_FILTER_REQUEST_MAX_BYTES:
+        return _ai_filter_response(
+            {"error": "O texto enviado é grande demais."}, status=413
+        )
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return _ai_filter_response(
+            {"error": "Envie apenas um texto curto em JSON."}, status=400
+        )
+    if not isinstance(payload, dict) or set(payload) != {"texto"}:
+        return _ai_filter_response(
+            {"error": "Envie apenas um texto curto em JSON."}, status=400
+        )
+
+    try:
+        suggestion = interpret_text_filter(payload["texto"])
+    except InvalidFilterInput:
+        return _ai_filter_response(
+            {"error": "Escreva uma preferência curta para analisar."}, status=400
+        )
+    except FilterInterpretationUnsupported:
+        return _ai_filter_response(
+            {
+                "error": (
+                    "Entendi a preferência, mas ela ainda não pode ser "
+                    "aplicada exatamente nos filtros. Ajuste manualmente."
+                )
+            },
+            status=422,
+        )
+    except FilterInterpretationUnavailable:
+        return _ai_filter_response(
+            {
+                "error": (
+                    "O filtro por IA está temporariamente indisponível. "
+                    "Tente de novo em instantes ou ajuste os filtros manualmente."
+                )
+            },
+            status=503,
+        )
+
+    return _ai_filter_response(suggestion.public_payload())
 
 
 @require_GET

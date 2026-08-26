@@ -2,14 +2,16 @@ const MEDIA_TYPES = ["movie", "tv"];
 const NAVIGATION_KEYS = ["ArrowLeft", "ArrowRight", "Home", "End"];
 
 function updateRangeDisplay(input, output, suffix = "", decimals = 1) {
-  if (!input || !output) return;
+  if (!input) return;
   const value = Number(input.value);
   const min = Number(input.min);
   const max = Number(input.max);
   const progress = ((value - min) / (max - min)) * 100;
   const label = `${value.toFixed(decimals)}${suffix}`;
-  output.value = label;
-  output.textContent = label;
+  if (output) {
+    output.value = label;
+    output.textContent = label;
+  }
   input.style.setProperty("--range-progress", `${progress}%`);
 }
 
@@ -23,8 +25,8 @@ export function initGenerator() {
   const ratingInput = document.querySelector("#min_rating");
   const ratingOutput = document.querySelector("#ratingOutput");
   const maxRatingInput = document.querySelector("#max_rating");
-  const maxRatingOutput = document.querySelector("#maxRatingOutput");
   const releaseYearInput = document.querySelector("#min_release_year");
+  const maxReleaseYearInput = document.querySelector("#max_release_year");
   const releaseYearOutput = document.querySelector("#releaseYearOutput");
   const mediaInput = document.querySelector("[data-media-input]");
   const mediaButtons = [...document.querySelectorAll("[data-media-option]")];
@@ -82,8 +84,12 @@ export function initGenerator() {
     if (changedInput === maxRatingInput && Number(maxRatingInput.value) < Number(ratingInput.value)) {
       ratingInput.value = maxRatingInput.value;
     }
-    updateRangeDisplay(ratingInput, ratingOutput, "+");
-    updateRangeDisplay(maxRatingInput, maxRatingOutput);
+    const minRating = Number(ratingInput.value).toFixed(1);
+    const maxRating = Number(maxRatingInput.value).toFixed(1);
+    updateRangeDisplay(ratingInput, null, "");
+    updateRangeDisplay(maxRatingInput, null, "");
+    ratingOutput.value = `${minRating} — ${maxRating}`;
+    ratingOutput.textContent = `${minRating} — ${maxRating}`;
   }
 
   ratingInput?.addEventListener("input", () => {
@@ -92,19 +98,105 @@ export function initGenerator() {
   });
   maxRatingInput?.addEventListener("input", () => {
     updateRatingRange(maxRatingInput);
-    pulseRangeValue(maxRatingOutput);
+    pulseRangeValue(ratingOutput);
   });
   updateRatingRange();
 
-  function updateReleaseYearDisplay() {
-    updateRangeDisplay(releaseYearInput, releaseYearOutput, "", 0);
+  function updateReleaseYearRange(changedInput) {
+    if (!releaseYearInput || !maxReleaseYearInput) return;
+    if (changedInput === releaseYearInput && Number(releaseYearInput.value) > Number(maxReleaseYearInput.value)) {
+      maxReleaseYearInput.value = releaseYearInput.value;
+    }
+    if (changedInput === maxReleaseYearInput && Number(maxReleaseYearInput.value) < Number(releaseYearInput.value)) {
+      releaseYearInput.value = maxReleaseYearInput.value;
+    }
+    updateRangeDisplay(releaseYearInput, null, "", 0);
+    updateRangeDisplay(maxReleaseYearInput, null, "", 0);
+    const minYear = Number(releaseYearInput.value).toFixed(0);
+    const maxYear = Number(maxReleaseYearInput.value).toFixed(0);
+    releaseYearOutput.value = `${minYear} — ${maxYear}`;
+    releaseYearOutput.textContent = `${minYear} — ${maxYear}`;
   }
 
   releaseYearInput?.addEventListener("input", () => {
-    updateReleaseYearDisplay();
+    updateReleaseYearRange(releaseYearInput);
     pulseRangeValue(releaseYearOutput);
   });
-  updateReleaseYearDisplay();
+  maxReleaseYearInput?.addEventListener("input", () => {
+    updateReleaseYearRange(maxReleaseYearInput);
+    pulseRangeValue(releaseYearOutput);
+  });
+  updateReleaseYearRange();
+
+  function markAiSuggested(element) {
+    element?.closest(".field")?.classList.add("is-ai-suggested");
+  }
+
+  function hasOption(select, value) {
+    return [...select.options].some((option) => option.value === String(value));
+  }
+
+  function setAiSuggestedValue(element, value) {
+    if (!element || value === null || value === undefined) return false;
+    const textValue = String(value);
+    if (element.tagName === "SELECT" && !hasOption(element, textValue)) return false;
+    if (element.type === "range") {
+      const numericValue = Number(value);
+      if (
+        !Number.isFinite(numericValue)
+        || numericValue < Number(element.min)
+        || numericValue > Number(element.max)
+      ) {
+        return false;
+      }
+    }
+    element.value = textValue;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    markAiSuggested(element);
+    return true;
+  }
+
+  function applyAiFilters(filters) {
+    if (!filters || typeof filters !== "object" || Array.isArray(filters)) return;
+    if (MEDIA_TYPES.includes(filters.media_type)) {
+      selectMedia(filters.media_type);
+      document.querySelector(".media-picker")?.classList.add("is-ai-suggested");
+    }
+
+    const activeMediaType = mediaInput?.value;
+    const genreInput = document.querySelector(`#${activeMediaType}_genre_id`);
+    setAiSuggestedValue(genreInput, filters.genre_value);
+    setAiSuggestedValue(releaseYearInput, filters.min_release_year);
+    setAiSuggestedValue(ratingInput, filters.min_rating);
+    setAiSuggestedValue(maxRatingInput, filters.max_rating);
+    setAiSuggestedValue(
+      document.querySelector("#runtime_filter"),
+      filters.runtime_filter,
+    );
+    if (activeMediaType === "movie") {
+      setAiSuggestedValue(
+        document.querySelector("#certification"),
+        filters.certification,
+      );
+    }
+  }
+
+  document.addEventListener("qualfilmehoje:apply-ai-filter", (event) => {
+    applyAiFilters(event.detail?.filters);
+  });
+
+  document.querySelector("[data-generator-form]")?.addEventListener(
+    "input",
+    (event) => {
+      event.target.closest(".field")?.classList.remove("is-ai-suggested");
+    },
+  );
+
+  mediaButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      document.querySelector(".media-picker")?.classList.remove("is-ai-suggested");
+    });
+  });
 
   document.querySelector("[data-alert-close]")?.addEventListener("click", (event) => {
     event.currentTarget.closest("[data-error-alert]")?.remove();

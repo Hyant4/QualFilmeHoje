@@ -27,6 +27,11 @@ urlpatterns = [
     path("security/csp-report/", views.csp_report, name="csp_report"),
     path("gerar/", views.generate_movie, name="generate_movie"),
     path(
+        "api/interpretar-filtro/",
+        views.interpret_filter,
+        name="interpret_filter",
+    ),
+    path(
         "api/onde-assistir/<str:media_type>/<int:tmdb_id>/",
         views.streaming_links,
         name="streaming_links",

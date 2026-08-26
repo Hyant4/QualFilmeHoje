@@ -3,6 +3,7 @@
 import math
 from concurrent.futures import ThreadPoolExecutor
 
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -42,13 +43,13 @@ def filter_options_context():
         "runtime_options": RUNTIME_OPTIONS,
         "certification_options": CERTIFICATION_OPTIONS,
         "movie_special_categories": [
-            (key, value["label"])
-            for key, value in SPECIAL_CATEGORIES["movie"].items()
+            (key, value["label"]) for key, value in SPECIAL_CATEGORIES["movie"].items()
         ],
         "tv_special_categories": [
-            (key, value["label"])
-            for key, value in SPECIAL_CATEGORIES["tv"].items()
+            (key, value["label"]) for key, value in SPECIAL_CATEGORIES["tv"].items()
         ],
+        "ai_filter_enabled": settings.AI_FILTER_ENABLED,
+        "ai_filter_max_text_chars": settings.AI_FILTER_MAX_TEXT_CHARS,
     }
 
 
@@ -84,8 +85,7 @@ def safe_home_rows(
     errors = {key: None for key in getters}
     with ThreadPoolExecutor(max_workers=len(getters)) as executor:
         futures = {
-            row_name: executor.submit(getter)
-            for row_name, getter in getters.items()
+            row_name: executor.submit(getter) for row_name, getter in getters.items()
         }
         for row_name, future in futures.items():
             try:
@@ -140,11 +140,11 @@ def _parse_rating(value, default):
     return round(min(max(parsed, 0.0), 10.0), 1)
 
 
-def _parse_min_release_year(value):
+def _parse_release_year(value, default):
     current_year = timezone.localdate().year
     parsed = parse_ascii_int(value, maximum=9999)
     if parsed is None:
-        return MIN_RELEASE_YEAR
+        return default
     return min(max(parsed, MIN_RELEASE_YEAR), current_year)
 
 
@@ -172,9 +172,14 @@ def parse_filters(request_or_payload):
         payload.get("max_rating", DEFAULT_MAX_RATING), DEFAULT_MAX_RATING
     )
     max_rating = max(max_rating, min_rating)
-    min_release_year = _parse_min_release_year(
-        payload.get("min_release_year", MIN_RELEASE_YEAR)
+    min_release_year = _parse_release_year(
+        payload.get("min_release_year", MIN_RELEASE_YEAR), MIN_RELEASE_YEAR
     )
+    max_release_year = _parse_release_year(
+        payload.get("max_release_year", timezone.localdate().year),
+        timezone.localdate().year,
+    )
+    max_release_year = max(max_release_year, min_release_year)
     runtime_filter = payload.get("runtime_filter", "")
     if runtime_filter not in RUNTIME_FILTERS:
         runtime_filter = ""
@@ -191,6 +196,7 @@ def parse_filters(request_or_payload):
         min_rating,
         max_rating,
         min_release_year,
+        max_release_year,
         runtime_filter,
         certification,
         special_category,
@@ -220,6 +226,7 @@ def _landing_context(genre_sets, genres_error, rows, row_errors):
         "selected_min_rating": DEFAULT_MIN_RATING,
         "selected_max_rating": DEFAULT_MAX_RATING,
         "selected_min_release_year": MIN_RELEASE_YEAR,
+        "selected_max_release_year": current_year,
         "min_release_year_limit": MIN_RELEASE_YEAR,
         "max_release_year_limit": current_year,
         "trending_movies": rows["movie"],
@@ -254,9 +261,7 @@ def build_home_context(
         get_upcoming_movies=get_upcoming_movies,
     )
     context = _landing_context(genre_sets, error, rows, row_errors)
-    context.update(
-        get_library(visitor_id, user=user, include_favorites=False)
-    )
+    context.update(get_library(visitor_id, user=user, include_favorites=False))
     return context
 
 
@@ -281,6 +286,7 @@ def build_generation_context(
         min_rating,
         max_rating,
         min_release_year,
+        max_release_year,
         runtime_filter,
         certification,
         special_category,
@@ -294,6 +300,9 @@ def build_generation_context(
         }.items()
         if value
     }
+    release_year_options = {"min_release_year": min_release_year}
+    if payload.get("max_release_year") is not None:
+        release_year_options["max_release_year"] = max_release_year
     with ThreadPoolExecutor(max_workers=3) as executor:
         genres_future = executor.submit(safe_genres, get_genres)
         rows_future = executor.submit(
@@ -309,8 +318,8 @@ def build_generation_context(
             genre_id or None,
             min_rating,
             max_rating,
-            min_release_year=min_release_year,
             include_streaming=False,
+            **release_year_options,
             **discovery_options,
         )
         genre_sets, genres_error = genres_future.result()
@@ -330,6 +339,7 @@ def build_generation_context(
             "selected_min_rating": min_rating,
             "selected_max_rating": max_rating,
             "selected_min_release_year": min_release_year,
+            "selected_max_release_year": max_release_year,
             "selected_runtime_filter": runtime_filter,
             "selected_certification": certification,
             "selected_special_category": special_category,

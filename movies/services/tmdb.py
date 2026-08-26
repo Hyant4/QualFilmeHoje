@@ -109,6 +109,7 @@ def _discovery_cache_key(
     min_rating,
     max_rating,
     min_release_year=None,
+    max_release_year=None,
     runtime_filter=None,
     certification=None,
     special_category=None,
@@ -119,6 +120,7 @@ def _discovery_cache_key(
         min_rating,
         max_rating,
         min_release_year,
+        max_release_year,
         runtime_filter,
         certification,
         special_category,
@@ -144,6 +146,7 @@ def _load_discovery_page(
     max_rating,
     filters,
     min_release_year=None,
+    max_release_year=None,
     runtime_filter=None,
     certification=None,
     special_category=None,
@@ -155,6 +158,7 @@ def _load_discovery_page(
         max_rating,
         filters,
         min_release_year,
+        max_release_year,
         runtime_filter,
         certification,
         special_category,
@@ -169,6 +173,7 @@ def get_random_title(
     min_rating=0,
     max_rating=10,
     min_release_year=None,
+    max_release_year=None,
     *,
     include_streaming=True,
     runtime_filter=None,
@@ -181,6 +186,7 @@ def get_random_title(
         min_rating,
         max_rating,
         min_release_year,
+        max_release_year,
         include_streaming=include_streaming,
         runtime_filter=runtime_filter,
         certification=certification,
@@ -194,14 +200,29 @@ def get_random_title(
 
 
 def get_random_movie(
-    genre_id=None, min_rating=0, max_rating=10, min_release_year=None
+    genre_id=None,
+    min_rating=0,
+    max_rating=10,
+    min_release_year=None,
+    max_release_year=None,
 ):
     return get_random_title(
-        "movie", genre_id, min_rating, max_rating, min_release_year
+        "movie",
+        genre_id,
+        min_rating,
+        max_rating,
+        min_release_year,
+        max_release_year,
     )
 
 
 def get_random_series(
-    genre_id=None, min_rating=0, max_rating=10, min_release_year=None
+    genre_id=None,
+    min_rating=0,
+    max_rating=10,
+    min_release_year=None,
+    max_release_year=None,
 ):
-    return get_random_title("tv", genre_id, min_rating, max_rating, min_release_year)
+    return get_random_title(
+        "tv", genre_id, min_rating, max_rating, min_release_year, max_release_year
+    )

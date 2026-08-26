@@ -14,6 +14,7 @@ class FrontendModuleTests(SimpleTestCase):
         self.assertEqual(
             set(imports),
             {
+                "./ai-filter.js",
                 "./favorites.js",
                 "./generator.js",
                 "./history.js",
@@ -30,4 +31,6 @@ class FrontendModuleTests(SimpleTestCase):
     def test_site_entrypoint_remains_only_an_initialisation_layer(self):
         entrypoint = Path(finders.find("movies/js/site.js"))
 
-        self.assertLessEqual(len(entrypoint.read_text(encoding="utf-8").splitlines()), 25)
+        self.assertLessEqual(
+            len(entrypoint.read_text(encoding="utf-8").splitlines()), 25
+        )

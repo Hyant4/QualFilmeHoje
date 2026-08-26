@@ -119,6 +119,7 @@ class MovieViewTests(TestCase):
         self.assertContains(response, 'type="range"')
         self.assertContains(response, 'step="0.1"')
         self.assertContains(response, 'name="min_release_year"')
+        self.assertContains(response, 'name="max_release_year"')
         self.assertContains(response, 'name="runtime_filter"')
         self.assertContains(response, 'name="certification"')
         self.assertNotContains(response, 'name="special_category"')
@@ -128,10 +129,11 @@ class MovieViewTests(TestCase):
         self.assertContains(response, "Thriller coreano")
         self.assertContains(response, "Dorama coreano")
         self.assertContains(response, 'step="1"')
-        self.assertContains(response, "Ano mínimo de lançamento")
-        self.assertContains(response, "Nota máxima no TMDB")
+        self.assertContains(response, "Janela de lançamento")
+        self.assertContains(response, "Faixa de notas no TMDB")
         self.assertContains(response, "Séries")
-        self.assertContains(response, "Nota mínima no TMDB")
+        self.assertContains(response, "A partir de")
+        self.assertContains(response, "Até")
         self.assertContains(response, "hero-session-focus.webp")
         self.assertContains(response, "logo-q.png", count=5)
         self.assertContains(response, 'rel="icon"')
@@ -207,12 +209,19 @@ class MovieViewTests(TestCase):
                 "min_rating": "7.5",
                 "max_rating": "9.0",
                 "min_release_year": "2001",
+                "max_release_year": "2012",
             },
         )
 
         self.assertEqual(response.status_code, 200)
         mock_random.assert_called_once_with(
-            "movie", "18", 7.5, 9.0, min_release_year=2001, include_streaming=False
+            "movie",
+            "18",
+            7.5,
+            9.0,
+            min_release_year=2001,
+            max_release_year=2012,
+            include_streaming=False,
         )
         self.assertContains(response, "Filme teste")
         self.assertContains(response, "Trailer")
@@ -426,7 +435,7 @@ class MovieViewTests(TestCase):
 
         response = self.client.post(
             reverse("movies:generate_movie"),
-            {"min_release_year": "9999"},
+            {"min_release_year": "9999", "max_release_year": "2000"},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -436,6 +445,7 @@ class MovieViewTests(TestCase):
             6.0,
             10.0,
             min_release_year=timezone.localdate().year,
+            max_release_year=timezone.localdate().year,
             include_streaming=False,
         )
 

@@ -14,9 +14,11 @@ load_dotenv(BASE_DIR / ".env")
 IS_TESTING = "test" in sys.argv
 VERCEL_ENV = os.getenv("VERCEL_ENV", "").strip().lower()
 IS_VERCEL = os.getenv("VERCEL", "").strip() == "1" or bool(VERCEL_ENV)
-DJANGO_ENV = os.getenv(
-    "DJANGO_ENV", "production" if IS_VERCEL else "development"
-).strip().lower()
+DJANGO_ENV = (
+    os.getenv("DJANGO_ENV", "production" if IS_VERCEL else "development")
+    .strip()
+    .lower()
+)
 if DJANGO_ENV not in {"development", "test", "preview", "production"}:
     raise ImproperlyConfigured(
         "DJANGO_ENV deve ser development, test, preview ou production."
@@ -28,6 +30,47 @@ DEBUG = os.getenv("DJANGO_DEBUG", "False").strip().lower() == "true"
 if IS_DEPLOYED and DEBUG:
     raise ImproperlyConfigured(
         "DJANGO_DEBUG deve ser False fora do desenvolvimento local."
+    )
+
+
+def _boolean_environment_setting(name, default):
+    value = os.getenv(name, default).strip().lower()
+    if value not in {"true", "false"}:
+        raise ImproperlyConfigured(f"{name} deve ser True ou False.")
+    return value == "true"
+
+
+def _bounded_integer_environment_setting(name, default, minimum, maximum):
+    raw_value = os.getenv(name, str(default)).strip()
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ImproperlyConfigured(f"{name} deve ser um numero inteiro.") from exc
+    if not minimum <= value <= maximum:
+        raise ImproperlyConfigured(f"{name} deve ficar entre {minimum} e {maximum}.")
+    return value
+
+
+# O chat e opcional: a chave do Gemini nunca chega ao navegador e a feature
+# continua desligada ate que seja habilitada explicitamente no ambiente.
+AI_FILTER_ENABLED = _boolean_environment_setting("AI_FILTER_ENABLED", "False")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite").strip()
+AI_FILTER_TIMEOUT_SECONDS = _bounded_integer_environment_setting(
+    "AI_FILTER_TIMEOUT_SECONDS", 20, 10, 45
+)
+AI_FILTER_RETRIES = _bounded_integer_environment_setting("AI_FILTER_RETRIES", 2, 1, 3)
+AI_FILTER_MAX_TEXT_CHARS = _bounded_integer_environment_setting(
+    "AI_FILTER_MAX_TEXT_CHARS", 360, 40, 1000
+)
+AI_FILTER_CACHE_SECONDS = _bounded_integer_environment_setting(
+    "AI_FILTER_CACHE_SECONDS", 600, 0, 3600
+)
+if AI_FILTER_ENABLED and not GEMINI_MODEL:
+    raise ImproperlyConfigured("GEMINI_MODEL e obrigatorio com AI_FILTER_ENABLED=True.")
+if AI_FILTER_ENABLED and IS_DEPLOYED and not GEMINI_API_KEY:
+    raise ImproperlyConfigured(
+        "GEMINI_API_KEY e obrigatoria com AI_FILTER_ENABLED=True fora do ambiente local."
     )
 
 
@@ -62,9 +105,7 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
-SITE_URL = os.getenv(
-    "SITE_URL", "https://qualfilmehoje.vercel.app"
-).strip().rstrip("/")
+SITE_URL = os.getenv("SITE_URL", "https://qualfilmehoje.vercel.app").strip().rstrip("/")
 site_url_parts = urlsplit(SITE_URL)
 if (
     site_url_parts.scheme not in {"http", "https"}
@@ -89,18 +130,16 @@ BING_SITE_VERIFICATION = (
     or "BAADAFCE767CC2A73B3A5DEF51A06BC7"
 )
 INDEXNOW_KEY = (
-    os.getenv("INDEXNOW_KEY", "").strip()
-    or "a8c7cb6034564b13897e893feebabe4e"
+    os.getenv("INDEXNOW_KEY", "").strip() or "a8c7cb6034564b13897e893feebabe4e"
 )
 if not 8 <= len(INDEXNOW_KEY) <= 128 or any(
-    not character.isascii()
-    or not (character.isalnum() or character == "-")
+    not character.isascii() or not (character.isalnum() or character == "-")
     for character in INDEXNOW_KEY
 ):
     raise ImproperlyConfigured("INDEXNOW_KEY possui formato invalido.")
-indexnow_enabled_value = os.getenv(
-    "INDEXNOW_ENABLED", "True" if IS_PRODUCTION else "False"
-).strip().lower()
+indexnow_enabled_value = (
+    os.getenv("INDEXNOW_ENABLED", "True" if IS_PRODUCTION else "False").strip().lower()
+)
 if indexnow_enabled_value not in {"true", "false"}:
     raise ImproperlyConfigured("INDEXNOW_ENABLED deve ser True ou False.")
 INDEXNOW_ENABLED = indexnow_enabled_value == "true"
@@ -243,8 +282,7 @@ else:
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
-            "django.contrib.auth.password_validation."
-            "UserAttributeSimilarityValidator"
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
         )
     },
     {

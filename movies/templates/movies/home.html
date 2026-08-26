@@ -132,7 +132,7 @@
               <div>
                 <p class="eyebrow">Seu filtro</p>
                 <h2 id="session-panel-title">Escolha sua sessão</h2>
-                <p>Ajuste só o que importa. Qualquer campo pode ficar aberto.</p>
+                <p>Diga o clima da noite ou monte os detalhes por aqui.</p>
               </div>
             <div class="media-picker" role="tablist" aria-label="Tipo de conteúdo">
               <button type="button" role="tab" aria-controls="genre-movie" aria-selected="{% if selected_media_type != 'tv' %}true{% else %}false{% endif %}" data-media-option="movie">Filme</button>
@@ -140,109 +140,180 @@
             </div>
             </div>
 
+        {% if ai_filter_enabled %}
+          <section class="ai-filter" aria-labelledby="ai-filter-title" data-ai-filter data-ai-filter-url="{% url 'movies:interpret_filter' %}">
+            <div class="ai-filter-intro">
+              <span class="ai-orbit" aria-hidden="true">
+                <span class="ai-orbit-ring"></span>
+                <span class="ai-orbit-core">✦</span>
+              </span>
+              <div>
+                <p class="eyebrow">Direção da sessão · Gemini</p>
+                <h3 id="ai-filter-title">Comece pelo clima.</h3>
+                <p>Uma frase vira um ponto de partida nos controles abaixo.</p>
+              </div>
+            </div>
+            <div class="ai-filter-conversation">
+              <div class="ai-message ai-message--gemini">
+                <span class="ai-message-name">Gemini</span>
+                <p>Que tipo de história combina com a sua noite?</p>
+              </div>
+              <p class="ai-message ai-message--user" data-ai-filter-user-message hidden></p>
+              <p class="ai-message ai-message--gemini ai-message--reply" data-ai-filter-reply hidden></p>
+              <form class="ai-filter-form" data-ai-filter-form novalidate>
+                <label class="visually-hidden" for="ai_filter_text">Descreva o que você quer assistir</label>
+                <div class="ai-filter-controls">
+                  <input
+                    id="ai_filter_text"
+                    type="text"
+                    maxlength="{{ ai_filter_max_text_chars }}"
+                    autocomplete="off"
+                    placeholder="Ex.: série coreana de suspense, recente"
+                    aria-describedby="ai-filter-help ai-filter-status"
+                    data-ai-filter-input
+                  >
+                  <button type="submit" class="ai-filter-button" data-ai-filter-submit>
+                    <span data-ai-filter-label>Aplicar ao filtro</span>
+                    <span class="ai-filter-arrow" aria-hidden="true">↑</span>
+                  </button>
+                </div>
+              </form>
+              <div class="ai-prompt-list" aria-label="Sugestões para começar">
+                <button type="button" data-ai-filter-prompt="Filme curto de suspense, bem avaliado">Suspense curto</button>
+                <button type="button" data-ai-filter-prompt="Série coreana de suspense, recente">Série coreana</button>
+                <button type="button" data-ai-filter-prompt="Filme espacial para hoje">Exploração espacial</button>
+              </div>
+              <p class="ai-filter-help" id="ai-filter-help">O Gemini apenas sugere critérios; você revisa tudo antes de sortear. Não envie dados pessoais.</p>
+              <p class="ai-filter-status" id="ai-filter-status" data-ai-filter-status role="status" aria-live="polite"></p>
+              <span class="ai-filter-thinking" aria-hidden="true"><i></i><i></i><i></i></span>
+            </div>
+          </section>
+        {% endif %}
+
         <form class="generator" method="post" action="{% url 'movies:generate_movie' %}" data-generator-form>
           {% csrf_token %}
           <input type="hidden" name="media_type" value="{{ selected_media_type|default:'movie' }}" data-media-input>
-          <div class="field genre-field" id="genre-movie" role="tabpanel" data-genre-field="movie" {% if selected_media_type == 'tv' %}hidden{% endif %}>
-            <label for="movie_genre_id">Gênero do filme</label>
-            <div class="select-wrap">
-              <select id="movie_genre_id" name="genre_id" {% if selected_media_type == 'tv' %}disabled{% endif %}>
-                <option value="">Qualquer gênero</option>
-                {% for genre in movie_genres %}
-                  <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
-                {% endfor %}
-                <optgroup label="Categorias especiais">
-                  {% for value, label in movie_special_categories %}
-                    <option value="special:{{ value }}" {% if selected_special_category == value %}selected{% endif %}>{{ label }}</option>
+          <div class="manual-filter-heading">
+            <span aria-hidden="true">02</span>
+            <div>
+              <p class="eyebrow">Ajuste fino</p>
+              <p>Prefere decidir no detalhe? Os controles continuam todos seus.</p>
+            </div>
+          </div>
+          <div class="filter-grid">
+            <div class="field genre-field" id="genre-movie" role="tabpanel" data-genre-field="movie" {% if selected_media_type == 'tv' %}hidden{% endif %}>
+              <label for="movie_genre_id">Gênero do filme</label>
+              <div class="select-wrap">
+                <select id="movie_genre_id" name="genre_id" {% if selected_media_type == 'tv' %}disabled{% endif %}>
+                  <option value="">Qualquer gênero</option>
+                  {% for genre in movie_genres %}
+                    <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
                   {% endfor %}
-                </optgroup>
-              </select>
+                  <optgroup label="Categorias especiais">
+                    {% for value, label in movie_special_categories %}
+                      <option value="special:{{ value }}" {% if selected_special_category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </optgroup>
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div class="field genre-field" id="genre-tv" role="tabpanel" data-genre-field="tv" {% if selected_media_type != 'tv' %}hidden{% endif %}>
-            <label for="tv_genre_id">Gênero da série</label>
-            <div class="select-wrap">
-              <select id="tv_genre_id" name="genre_id" {% if selected_media_type != 'tv' %}disabled{% endif %}>
-                <option value="">Qualquer gênero</option>
-                {% for genre in tv_genres %}
-                  <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
-                {% endfor %}
-                <optgroup label="Categorias especiais">
-                  {% for value, label in tv_special_categories %}
-                    <option value="special:{{ value }}" {% if selected_special_category == value %}selected{% endif %}>{{ label }}</option>
+            <div class="field genre-field" id="genre-tv" role="tabpanel" data-genre-field="tv" {% if selected_media_type != 'tv' %}hidden{% endif %}>
+              <label for="tv_genre_id">Gênero da série</label>
+              <div class="select-wrap">
+                <select id="tv_genre_id" name="genre_id" {% if selected_media_type != 'tv' %}disabled{% endif %}>
+                  <option value="">Qualquer gênero</option>
+                  {% for genre in tv_genres %}
+                    <option value="{{ genre.id }}" {% if selected_genre == genre.id|stringformat:'s' %}selected{% endif %}>{{ genre.name }}</option>
                   {% endfor %}
-                </optgroup>
-              </select>
+                  <optgroup label="Categorias especiais">
+                    {% for value, label in tv_special_categories %}
+                      <option value="special:{{ value }}" {% if selected_special_category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            <div class="field period-field">
+              <div class="score-label">
+                <label id="releaseYearLabel" for="min_release_year">Janela de lançamento</label>
+                <output for="min_release_year max_release_year" id="releaseYearOutput" aria-live="polite">{{ selected_min_release_year }} — {{ selected_max_release_year }}</output>
+              </div>
+              <div class="range-pair" aria-labelledby="releaseYearLabel">
+                <div class="range-control">
+                  <label class="range-control-label" for="min_release_year">A partir de</label>
+                  <input
+                    type="range"
+                    id="min_release_year"
+                    name="min_release_year"
+                    min="{{ min_release_year_limit }}"
+                    max="{{ max_release_year_limit }}"
+                    step="1"
+                    value="{{ selected_min_release_year }}"
+                    aria-describedby="releaseYearScale releaseYearOutput"
+                  >
+                </div>
+                <div class="range-control range-control--maximum">
+                  <label class="range-control-label" for="max_release_year">Até</label>
+                  <input
+                    type="range"
+                    id="max_release_year"
+                    name="max_release_year"
+                    min="{{ min_release_year_limit }}"
+                    max="{{ max_release_year_limit }}"
+                    step="1"
+                    value="{{ selected_max_release_year }}"
+                    aria-describedby="releaseYearScale releaseYearOutput"
+                  >
+                </div>
+              </div>
+              <div class="range-scale mono" id="releaseYearScale" aria-hidden="true">
+                <span>{{ min_release_year_limit }}</span><span>{{ max_release_year_limit }}</span>
+              </div>
+            </div>
+
+            <div class="field rating-range-field">
+              <div class="score-label">
+                <label id="ratingRangeLabel" for="min_rating">Faixa de notas no TMDB</label>
+                <output for="min_rating max_rating" id="ratingOutput" aria-live="polite">{{ selected_min_rating|default:6|floatformat:1 }} — {{ selected_max_rating|default:10|floatformat:1 }}</output>
+              </div>
+              <div class="range-pair" aria-labelledby="ratingRangeLabel">
+                <div class="range-control">
+                  <label class="range-control-label" for="min_rating">Mínima</label>
+                  <input
+                    type="range"
+                    id="min_rating"
+                    name="min_rating"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    value="{{ selected_min_rating|default:6|stringformat:'s' }}"
+                    aria-describedby="ratingScale ratingOutput"
+                  >
+                </div>
+                <div class="range-control range-control--maximum">
+                  <label class="range-control-label" for="max_rating">Máxima</label>
+                  <input
+                    type="range"
+                    id="max_rating"
+                    name="max_rating"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    value="{{ selected_max_rating|default:10|stringformat:'s' }}"
+                    aria-describedby="ratingScale ratingOutput"
+                  >
+                </div>
+              </div>
+              <div class="range-scale mono" id="ratingScale" aria-hidden="true">
+                <span>0</span><span>5</span><span>10</span>
+              </div>
             </div>
           </div>
 
-          <div class="field score-field">
-            <div class="score-label">
-              <label for="min_release_year">Ano mínimo de lançamento</label>
-              <output for="min_release_year" id="releaseYearOutput">{{ selected_min_release_year }}</output>
-            </div>
-            <input
-              type="range"
-              id="min_release_year"
-              name="min_release_year"
-              min="{{ min_release_year_limit }}"
-              max="{{ max_release_year_limit }}"
-              step="1"
-              value="{{ selected_min_release_year }}"
-              aria-describedby="releaseYearScale"
-            >
-            <div class="range-scale mono" id="releaseYearScale" aria-hidden="true">
-              <span>{{ min_release_year_limit }}</span><span>{{ max_release_year_limit }}</span>
-            </div>
-          </div>
-
-          <div class="field score-field">
-            <div class="score-label">
-              <label for="min_rating">Nota mínima no TMDB</label>
-              <output for="min_rating" id="ratingOutput">{{ selected_min_rating|default:6|floatformat:1 }}+</output>
-            </div>
-            <input
-              type="range"
-              id="min_rating"
-              name="min_rating"
-              min="0"
-              max="10"
-              step="0.1"
-              value="{{ selected_min_rating|default:6|stringformat:'s' }}"
-              aria-describedby="ratingScale"
-            >
-            <div class="range-scale mono" id="ratingScale" aria-hidden="true">
-              <span>0</span><span>5</span><span>10</span>
-            </div>
-          </div>
-
-          <div class="field score-field">
-            <div class="score-label">
-              <label for="max_rating">Nota máxima no TMDB</label>
-              <output for="max_rating" id="maxRatingOutput">{{ selected_max_rating|default:10|floatformat:1 }}</output>
-            </div>
-            <input
-              type="range"
-              id="max_rating"
-              name="max_rating"
-              min="0"
-              max="10"
-              step="0.1"
-              value="{{ selected_max_rating|default:10|stringformat:'s' }}"
-              aria-describedby="maxRatingScale"
-            >
-            <div class="range-scale mono" id="maxRatingScale" aria-hidden="true">
-              <span>0</span><span>5</span><span>10</span>
-            </div>
-          </div>
-
-          <button class="generate-button" type="submit" data-generate-button>
-            <span class="button-label">Sortear agora</span>
-            <span aria-hidden="true">→</span>
-          </button>
-
-          <div class="advanced-filters" aria-label="Mais filtros">
+          <div class="filter-footer">
+            <div class="advanced-filters" aria-label="Mais filtros">
             <div class="field">
               <label for="runtime_filter">Duração</label>
               <div class="select-wrap">
@@ -264,6 +335,12 @@
                 </select>
               </div>
             </div>
+            </div>
+
+            <button class="generate-button" type="submit" data-generate-button>
+              <span class="button-label">Sortear agora</span>
+              <span aria-hidden="true">→</span>
+            </button>
           </div>
         </form>
           </aside>
