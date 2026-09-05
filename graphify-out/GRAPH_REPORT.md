@@ -5,19 +5,19 @@
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 644 nodes · 1247 edges · 46 communities (32 shown, 14 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 101 edges (avg confidence: 0.89)
+- 637 nodes · 1213 edges · 45 communities (30 shown, 15 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 107 edges (avg confidence: 0.71)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cd52c984`
+- Built from commit: `1960a0d6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - views.py
+- watchmode.py
 - library.py
-- test_indexnow.py
 - rate_limit
 - FilterIntent
 - Security Hardening Plan
@@ -49,22 +49,21 @@
 - Hero POV image
 - Q: Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?
 - AGENTS.md
-- initGenerator
-- signals.py
+- use_cases/__init__.py
 - ai/__init__.py
 - QualFilmeHoje
 
 ## God Nodes (most connected - your core abstractions)
-1. `Title` - 27 edges
-2. `MovieViewTests` - 27 edges
-3. `AuthenticationTests` - 22 edges
-4. `TMDBError` - 19 edges
-5. `FilterIntent` - 19 edges
-6. `rate_limit()` - 19 edges
-7. `TMDBServiceTests` - 17 edges
-8. `get_streaming_groups()` - 17 edges
-9. `get_title_details()` - 16 edges
-10. `create_title()` - 16 edges
+1. `MovieViewTests` - 24 edges
+2. `FilterIntent` - 23 edges
+3. `Title` - 23 edges
+4. `AuthenticationTests` - 22 edges
+5. `TMDBServiceTests` - 17 edges
+6. `GeminiFilterError` - 16 edges
+7. `get_title_details()` - 16 edges
+8. `TMDBError` - 16 edges
+9. `UnsupportedFilterIntent` - 15 edges
+10. `get_random_title()` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Remaining hardening work query result` --reports_remaining_work_for--> `Security Hardening Plan`  [EXTRACTED]
@@ -81,19 +80,19 @@
 ## Import Cycles
 - None detected.
 
-## Communities (46 total, 14 thin omitted)
+## Communities (45 total, 15 thin omitted)
 
 ### Community 0 - "views.py"
+Cohesion: 0.08
+Nodes (44): csrf_exempt, is_favorite(), _build_title_payload(), _fetch_title_extras(), _get(), get_genres(), _get_movie_release_list(), get_now_playing_movies() (+36 more)
+
+### Community 1 - "watchmode.py"
 Cohesion: 0.07
-Nodes (49): csrf_exempt, _account_user(), get_favorites(), get_library(), is_favorite(), Retorna a coleção da página Minha lista em uma única consulta., toggle_favorite(), _build_title_payload() (+41 more)
+Nodes (33): dict, HTTPRedirectHandler, ExternalResponseError, NoRedirectHandler, open_json(), Exception, Leitura JSON limitada, sem encaminhar credenciais em redirects., A resposta externa nao e JSON confiavel dentro dos limites locais. (+25 more)
 
-### Community 1 - "library.py"
-Cohesion: 0.05
-Nodes (42): dict, HTTPRedirectHandler, ExternalResponseError, NoRedirectHandler, open_json(), Exception, Leitura JSON limitada, sem encaminhar credenciais em redirects., A resposta externa nao e JSON confiavel dentro dos limites locais. (+34 more)
-
-### Community 2 - "test_indexnow.py"
-Cohesion: 0.12
-Nodes (14): _canonical_url(), Notifica buscadores participantes quando uma URL publica e criada., Monta e envia a URL publica de um filme ou serie validos., Envia uma URL canonica sem propagar falhas para a requisicao do usuario., submit_title_url(), submit_url(), IndexNowClientTests, IndexNowEndpointTests (+6 more)
+### Community 2 - "library.py"
+Cohesion: 0.06
+Nodes (38): AppConfig, atomic, MoviesConfig, _canonical_url(), Notifica buscadores participantes quando uma URL publica e criada., Monta e envia a URL publica de um filme ou serie validos., Envia uma URL canonica sem propagar falhas para a requisicao do usuario., submit_title_url() (+30 more)
 
 ### Community 3 - "rate_limit"
 Cohesion: 0.07
@@ -112,8 +111,8 @@ Cohesion: 0.09
 Nodes (25): Hero session focus image, QualFilmeHoje logo, QualFilmeHoje social sharing image, Logout template, Email confirmation sent message, Email confirmed message, Account signup template, Verification sent template (+17 more)
 
 ### Community 7 - "site.js"
-Cohesion: 0.10
-Nodes (26): FilterRequestError, initAiFilter(), responsePayload(), setMessage(), setStatus(), initFavorites(), initBrowserHistory(), normaliseBrowserHistory() (+18 more)
+Cohesion: 0.08
+Nodes (31): FilterRequestError, initAiFilter(), responsePayload(), setMessage(), setStatus(), initFavorites(), initGenerator(), MEDIA_TYPES (+23 more)
 
 ### Community 8 - "MovieViewTests"
 Cohesion: 0.17
@@ -124,23 +123,23 @@ Cohesion: 0.12
 Nodes (3): AuthenticationTests, patch, TestCase
 
 ### Community 10 - "Title"
-Cohesion: 0.18
-Nodes (11): Favorite, Generation, Meta, Tabela gerenciada usada pelo DatabaseCache nas funcoes da Vercel., SharedCacheEntry, Title, create_user(), Factories pequenas para manter os testes focados no comportamento relevante. (+3 more)
+Cohesion: 0.22
+Nodes (8): Title, create_user(), Factories pequenas para manter os testes focados no comportamento relevante., tmdb_title_payload(), TestCase, TestFactoriesTests, IndexNowPersistenceTests, TestCase
 
 ### Community 11 - "home.py"
-Cohesion: 0.22
-Nodes (15): InputValidationTests, build_generation_context(), build_home_context(), filter_options_context(), _genre_name(), _landing_context(), parse_ascii_int(), parse_filters() (+7 more)
+Cohesion: 0.17
+Nodes (18): InputValidationTests, build_generation_context(), build_home_context(), filter_options_context(), _genre_name(), _landing_context(), parse_ascii_int(), parse_filters() (+10 more)
 
 ### Community 12 - "SEOMetadataTests"
 Cohesion: 0.16
 Nodes (5): override_settings, patch, TestCase, SEOEndpointsTests, SEOMetadataTests
 
 ### Community 13 - "admin.py"
-Cohesion: 0.60
-Nodes (4): FavoriteAdmin, GenerationAdmin, TitleAdmin, register
+Cohesion: 0.19
+Nodes (9): FavoriteAdmin, GenerationAdmin, TitleAdmin, Favorite, Generation, Meta, Tabela gerenciada usada pelo DatabaseCache nas funcoes da Vercel., SharedCacheEntry (+1 more)
 
 ### Community 14 - "TitleSitemap"
-Cohesion: 0.21
+Cohesion: 0.18
 Nodes (4): CanonicalSitemap, StaticSitemap, TitleSitemap, Sitemap
 
 ### Community 16 - "context_processors.py"
@@ -160,53 +159,48 @@ Cohesion: 0.67
 Nodes (3): Password reset sent template, Password changed template, Password reset template
 
 ### Community 32 - "tmdb_catalog.py"
-Cohesion: 0.12
-Nodes (43): fetch_title_extras(), get_genres(), get_movie_release_list(), get_recent_top_titles(), get_title_details(), normalise_release_list_item(), Consultas de catálogo, detalhes e listas do TMDB., fetch_json() (+35 more)
+Cohesion: 0.13
+Nodes (40): fetch_title_extras(), get_genres(), get_movie_release_list(), get_recent_top_titles(), get_title_details(), normalise_release_list_item(), Consultas de catálogo, detalhes e listas do TMDB., Exception (+32 more)
 
 ### Community 40 - "Q: Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?, Source Nodes
-
-### Community 42 - "initGenerator"
-Cohesion: 0.24
-Nodes (12): initGenerator(), applyAiFilters(), hasOption(), markAiSuggested(), selectMedia(), setAiSuggestedValue(), updateRatingRange(), updateReleaseYearRange() (+4 more)
-
-### Community 43 - "signals.py"
-Cohesion: 0.18
-Nodes (12): AppConfig, atomic, MoviesConfig, merge_visitor_library(), Transfere a biblioteca anônima do navegador para a conta autenticada., invalidate_other_sessions_on_password_change(), invalidate_sessions_on_password_reset(), _invalidate_user_sessions() (+4 more)
 
 ### Community 45 - "QualFilmeHoje"
 Cohesion: 0.15
 Nodes (12): Como executar localmente, Créditos e licença, Estrutura do projeto, Funcionalidades, Pré-requisitos, QualFilmeHoje, Qualidade, Rotas principais (+4 more)
 
 ## Knowledge Gaps
-- **54 isolated node(s):** `Sobre o projeto`, `Funcionalidades`, `Tecnologias`, `Pré-requisitos`, `Variáveis de ambiente` (+49 more)
+- **54 isolated node(s):** `FilterRequestError`, `MEDIA_TYPES`, `NAVIGATION_KEYS`, `Migration`, `Migration` (+49 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **15 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Work-memory lessons
 
 **Preferred sources** — corroborated by past sessions; start here.
-- `rate_limits.py` (2× useful, score=1.997062187)
-- `RateLimitBucket` (2× useful, score=1.997062187)
-- `tmdb_catalog.py` (2× useful, score=1.996386298)
-- `tmdb.py` (2× useful, score=1.996183509) _(code changed — re-verify)_
-- `generate_movie()` (2× useful, score=1.996183509) _(code changed — re-verify)_
+- `rate_limits.py` (3× useful, score=2.317857137)
+- `RateLimitBucket` (3× useful, score=2.317857137)
+- `tmdb_catalog.py` (3× useful, score=2.317334443)
+- `vercel-firewall.ps1` (2× useful, score=1.546527738)
+- `generator.js` (2× useful, score=1.545268442)
+- `streaming.js` (2× useful, score=1.545268442)
+- `tmdb.py` (2× useful, score=1.543735806)
+- `generate_movie()` (2× useful, score=1.543735806)
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Title` connect `Title` to `views.py`, `library.py`, `test_indexnow.py`, `MovieViewTests`, `AuthenticationTests`, `home.py`, `SEOMetadataTests`, `admin.py`, `TitleSitemap`, `create_title`?**
-  _High betweenness centrality (0.082) - this node is a cross-community bridge._
+- **Why does `Title` connect `Title` to `views.py`, `library.py`, `AuthenticationTests`, `home.py`, `SEOMetadataTests`, `admin.py`, `TitleSitemap`, `create_title`?**
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
 - **Why does `MovieViewTests` connect `MovieViewTests` to `Title`, `create_title`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `AuthenticationTests` connect `AuthenticationTests` to `Title`, `create_title`?**
-  _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Are the 12 inferred relationships involving `Title` (e.g. with `TitleSitemap` and `create_title()`) actually correct?**
-  _`Title` has 12 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 3 inferred relationships involving `MovieViewTests` (e.g. with `Favorite` and `Generation`) actually correct?**
-  _`MovieViewTests` has 3 INFERRED edges - model-reasoned connections that need verification._
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `AuthenticationTests` connect `AuthenticationTests` to `Title`, `admin.py`, `create_title`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Are the 7 inferred relationships involving `FilterIntent` (e.g. with `UnsupportedFilterIntent` and `GeminiFilterError`) actually correct?**
+  _`FilterIntent` has 7 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 10 inferred relationships involving `Title` (e.g. with `TitleSitemap` and `create_title()`) actually correct?**
+  _`Title` has 10 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 3 inferred relationships involving `AuthenticationTests` (e.g. with `Favorite` and `Generation`) actually correct?**
   _`AuthenticationTests` has 3 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 4 inferred relationships involving `TMDBError` (e.g. with `normalise_release_list_item()` and `discovery_candidates()`) actually correct?**
-  _`TMDBError` has 4 INFERRED edges - model-reasoned connections that need verification._
+- **What connects `FilterRequestError`, `MEDIA_TYPES`, `NAVIGATION_KEYS` to the rest of the system?**
+  _54 weakly-connected nodes found - possible documentation gaps or missing edges._

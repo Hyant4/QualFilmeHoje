@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T06:27:03.604161+00:00",
+  "generated_at": "2026-09-05T06:58:35.739712+00:00",
   "nodes": {
     "docs_security_hardening_security_hardening_plan": {
       "code_fingerprint": "ab9d007e4511e7a9491c0be8938f0978d7d7a027e0c0f34e87b3bdd8d694d462",
@@ -12,7 +12,7 @@
           "q": "oque falta agora?"
         }
       ],
-      "score": 0.773085926,
+      "score": 0.599280785,
       "source_file": "docs/security-hardening.md",
       "status": "tentative",
       "uses": 1
@@ -28,7 +28,7 @@
           "q": "oque falta agora?"
         }
       ],
-      "score": 0.773085926,
+      "score": 0.599280785,
       "source_file": ".github/workflows/security.yml",
       "status": "tentative",
       "uses": 1
@@ -54,7 +54,7 @@
           "q": "voce lembra a 3 fase que iamos implementar agora?"
         }
       ],
-      "score": 2.317857137,
+      "score": 1.796756606,
       "source_file": "movies/infrastructure/rate_limits.py",
       "status": "preferred",
       "uses": 3
@@ -70,7 +70,7 @@
           "q": "oque falta agora?"
         }
       ],
-      "score": 0.773085926,
+      "score": 0.599280785,
       "source_file": "movies/mfa_adapter.py",
       "status": "tentative",
       "uses": 1
@@ -96,7 +96,7 @@
           "q": "voce lembra a 3 fase que iamos implementar agora?"
         }
       ],
-      "score": 2.317857137,
+      "score": 1.796756606,
       "source_file": "movies/models.py",
       "status": "preferred",
       "uses": 3
@@ -112,7 +112,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 0.771606556,
+      "score": 0.598134007,
       "source_file": "movies/services/http_client.py",
       "status": "tentative",
       "uses": 1
@@ -133,7 +133,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 1.543735806,
+      "score": 1.196673195,
       "source_file": "movies/services/tmdb.py",
       "status": "preferred",
       "uses": 2
@@ -159,7 +159,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 2.317334443,
+      "score": 1.796351424,
       "source_file": "movies/services/tmdb_catalog.py",
       "status": "preferred",
       "uses": 3
@@ -175,7 +175,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 0.771606556,
+      "score": 0.598134007,
       "source_file": "movies/services/tmdb_client.py",
       "status": "tentative",
       "uses": 1
@@ -191,7 +191,7 @@
           "q": "pode prosseguir com a fase 3"
         }
       ],
-      "score": 0.772286076,
+      "score": 0.598660757,
       "source_file": "movies/services/tmdb_payloads.py",
       "status": "tentative",
       "uses": 1
@@ -207,7 +207,7 @@
           "q": "voce lembra a 3 fase que iamos implementar agora?"
         }
       ],
-      "score": 0.77212925,
+      "score": 0.598539189,
       "source_file": "movies/services/watchmode.py",
       "status": "tentative",
       "uses": 1
@@ -223,7 +223,7 @@
           "q": "pode prosseguir com a fase 3"
         }
       ],
-      "score": 0.772286076,
+      "score": 0.598660757,
       "source_file": "movies/services/watchmode.py",
       "status": "tentative",
       "uses": 1
@@ -239,7 +239,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/static/movies/js/favorites.js",
       "status": "tentative",
       "uses": 1
@@ -260,7 +260,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 1.545268442,
+      "score": 1.197861264,
       "source_file": "movies/static/movies/js/generator.js",
       "status": "preferred",
       "uses": 2
@@ -276,7 +276,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/static/movies/js/history.js",
       "status": "tentative",
       "uses": 1
@@ -292,7 +292,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/static/movies/js/motion.js",
       "status": "tentative",
       "uses": 1
@@ -308,7 +308,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/static/movies/js/navigation.js",
       "status": "tentative",
       "uses": 1
@@ -324,7 +324,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/static/movies/js/site.js",
       "status": "tentative",
       "uses": 1
@@ -345,7 +345,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 1.545268442,
+      "score": 1.197861264,
       "source_file": "movies/static/movies/js/streaming.js",
       "status": "preferred",
       "uses": 2
@@ -361,7 +361,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/tests/factories.py",
       "status": "tentative",
       "uses": 1
@@ -377,7 +377,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/tests/factories.py",
       "status": "tentative",
       "uses": 1
@@ -393,7 +393,7 @@
           "q": "Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?"
         }
       ],
-      "score": 0.77182663,
+      "score": 0.598304604,
       "source_file": "movies/tests/factories.py",
       "status": "tentative",
       "uses": 1
@@ -409,7 +409,7 @@
           "q": "oque falta agora?"
         }
       ],
-      "score": 0.773085926,
+      "score": 0.599280785,
       "source_file": "movies/tests/test_security.py",
       "status": "tentative",
       "uses": 1
@@ -425,7 +425,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 0.771606556,
+      "score": 0.598134007,
       "source_file": "movies/use_cases/home.py",
       "status": "tentative",
       "uses": 1
@@ -441,7 +441,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 0.771606556,
+      "score": 0.598134007,
       "source_file": "movies/use_cases/titles.py",
       "status": "tentative",
       "uses": 1
@@ -457,7 +457,7 @@
           "q": "pode preparar o commit e seguir com o resto que falta"
         }
       ],
-      "score": 0.773441812,
+      "score": 0.59955666,
       "source_file": "movies/views.py",
       "status": "tentative",
       "uses": 1
@@ -478,7 +478,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 1.543735806,
+      "score": 1.196673195,
       "source_file": "movies/views.py",
       "status": "preferred",
       "uses": 2
@@ -494,7 +494,7 @@
           "q": "oque falta agora?"
         }
       ],
-      "score": 0.773085926,
+      "score": 0.599280785,
       "source_file": "movies/views.py",
       "status": "tentative",
       "uses": 1
@@ -510,7 +510,7 @@
           "q": "$security-review utilize essa skill para passar a limpo os problemas e refatoracoes, junto do $graphify"
         }
       ],
-      "score": 0.771606556,
+      "score": 0.598134007,
       "source_file": "movies/views.py",
       "status": "tentative",
       "uses": 1
@@ -531,7 +531,7 @@
           "q": "oque falta agora?"
         }
       ],
-      "score": 1.546527738,
+      "score": 1.198837445,
       "source_file": "ops/vercel-firewall.ps1",
       "status": "preferred",
       "uses": 2

@@ -1,7 +1,7 @@
 {
   "0": "views.py",
-  "1": "library.py",
-  "2": "test_indexnow.py",
+  "1": "watchmode.py",
+  "2": "library.py",
   "3": "rate_limit",
   "4": "FilterIntent",
   "5": "Security Hardening Plan",
@@ -41,8 +41,7 @@
   "39": "tests/__init__.py",
   "40": "Q: Como ficou a modularização do JavaScript e a adoção de factories na Parte 3?",
   "41": "AGENTS.md",
-  "42": "initGenerator",
-  "43": "signals.py",
+  "42": "use_cases/__init__.py",
   "44": "ai/__init__.py",
   "45": "QualFilmeHoje"
 }
